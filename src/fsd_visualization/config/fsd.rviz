@@ -1,4 +1,7 @@
 Panels:
+- Class: fsd_rviz_plugins/DiagnosticsPanel
+  Name: FSD diagnostics
+  CoordinateFrame: 0
 - Class: rviz_common/Displays
   Help Height: 70
   Name: Displays
@@ -126,7 +129,7 @@ Visualization Manager:
       Value: /planning/centerline_viz
     Value: true
   - Class: rviz_default_plugins/MarkerArray
-    Enabled: true
+    Enabled: false
     Name: Final planned path
     Namespaces: {}
     Topic:
@@ -207,6 +210,8 @@ Visualization Manager:
       Yaw: 0
     Saved: null
 Window Geometry:
+  FSD diagnostics:
+    collapsed: false
   Camera detections:
     collapsed: false
   Displays:
@@ -216,6 +221,6 @@ Window Geometry:
   Hide Right Dock: false
   Views:
     collapsed: false
-  Width: 1200
+  Width: 1600
   X: 100
   Y: 80

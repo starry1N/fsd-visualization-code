@@ -2,9 +2,22 @@
 
 ROS 2 Humble + RViz 的独立工作区，适用于已运行的 WUTA-FSD 算法、实车传感器或 ROS bag。启动时只打开 RViz 和显示辅助节点，不启动算法、传感器驱动或仿真器，不发布驾驶、发车、急停、任务或 TF 消息。
 
-主包名：`fsd_visualization`，另含 `fsd_rviz_plugins` 图像显示插件。版本：0.1.0。依赖 ROS 2、RViz、PyYAML，以及 WUTA 的消息定义（兼容桥接模式和接口测试需要 `wuta_msgs` / `autoware_msgs`）。源码不包含模型、FSD 算法源码或机器专用的安装环境。
+主包名：`fsd_visualization`，另含 `fsd_rviz_plugins` 图像显示插件和固定诊断面板。版本：0.1.0。依赖 ROS 2、RViz、PyYAML，以及 WUTA 的消息定义（兼容桥接模式和接口测试需要 `wuta_msgs` / `autoware_msgs`）。源码不包含模型、FSD 算法源码或机器专用的安装环境。
 
-2026年10月17日新增可选[ E22无线遥测与Foxglove组件](radio_link/README.md)：Linux按既有显示话题量化抽样，Windows从COM3接收并经Foxglove官方SDK显示；双向JSON扩展独立于驾驶话题。无线组件独立安装/启动，原有build.sh/start.sh行为不变，Linux无线串口必须显式指定。
+2026年10月17日新增可选[ E22无线遥测与Foxglove组件](radio_link/README.md)：Linux按既有显示话题量化抽样，Windows从COM3接收并经Foxglove官方SDK显示；双向JSON扩展独立于驾驶话题。无线组件独立安装/启动，原有build.sh/start.sh行为不变，Linux无线串口在`radio_link/radio.yaml`配置，启动参数可覆盖。
+
+
+## 独立仓库与主项目引用
+
+独立仓库：[starry1N/fsd-visualization-code](https://github.com/starry1N/fsd-visualization-code)（私有，克隆者需访问权限）。范围包含两个ROS包、显示配置与测试，以及可选E22/Foxglove组件；FSD消息包仍由原算法安装空间提供。
+
+```bash
+git clone https://github.com/starry1N/fsd-visualization-code.git
+```
+
+在 WUTA2026_FINAL 中以 `fsd-visualization-code/` 子模块挂载，路径及根启动入口保持兼容。主项目新克隆或更新后执行 `git submodule update --init --recursive`。独立使用时设置实际 `FSD_SETUP`；主项目内可复用相邻的已有FSD安装环境。修改在本仓库提交并推送，再回到主项目提交子模块指针；不要提交 build/install/log、无线虚拟环境或现场日志。
+
+设备隔离、串口固定命名、BRLTTY及本机检查结论见[共存检查](docs/DEVICE_COEXISTENCE.md)。本机E22尚未收到对端响应，不能宣称无线已双向连通；串口`connected`仅表示打开成功。RViz与无线分别运行：`bash start.sh mode:=bridge`、`bash radio_link/start_linux.sh --mode bridge`。
 
 ## 1. 解压、构建与打开 RViz
 
@@ -18,7 +31,7 @@ bash build.sh
 bash start.sh          # 默认自动打开 RViz
 ```
 
-这里的 `/path/to/...` 都需要换成实际路径。若终端已 source 所需算法环境，可以不设置 `FSD_SETUP`。该环境变量只加载已有安装空间，不发现源码、不编译 FSD、不启动任何算法。`build.sh` 只构建本代码包内的两个包。也可将 `src/` 下两个包一起放进你自己的 ROS 工作区后构建。
+这里的 `/path/to/...` 都需要换成实际路径。若终端已 source 所需算法环境，可以不设置 `FSD_SETUP`。未设置且当前缺少消息包时，脚本尝试加载相邻 `../WUTA-FSD/ros2_ws/install/setup.bash`；本仓库内可直接运行 `bash start.sh`。复制到其他目录时仍需已有消息环境或显式设置 `FSD_SETUP`。脚本只加载已有安装空间，不编译 FSD、不启动任何算法；打开 RViz 前检查必需消息，缺失时输出环境配置提示。`build.sh` 只构建本代码包内的两个包。也可将 `src/` 下两个包一起放进你自己的 ROS 工作区后构建。
 
 FSD 算法需通过原有入口单独运行，并提供有效 TF。初次连接没有图层时，先检查 topic、消息类型和 TF；可视化不会自动发车，也不会创建测试锥桶。
 
@@ -28,7 +41,7 @@ FSD 算法需通过原有入口单独运行，并提供有效 TF。初次连接�
 bash start.sh mode:=native use_sim_time:=false  # 自动打开 RViz，实车/墙钟
 ```
 
-适合当前算法已经发布 `*_viz`、相机标注图像的情况。默认 `native`，不会额外订阅锥桶/航点并重绘。显示辅助节点只订阅速度、发布速度文字及状态。
+适合当前算法已经发布 `*_viz`、相机标注图像的情况。默认 `native`，不会重绘锥桶/航点；显示桥仍订阅真实算法结果供诊断面板与坐标表使用，需要FSD消息环境。
 
 ### 模式 B：算法没有 `_viz` 时使用桥接显示
 
@@ -36,7 +49,7 @@ bash start.sh mode:=native use_sim_time:=false  # 自动打开 RViz，实车/墙
 bash start.sh mode:=bridge use_sim_time:=false  # 自动打开 RViz，转换算法输出
 ```
 
-桥接读取 `ConeArray`、`Lane`、`PoseStamped`，产生独立 `/fsd_visualization/*` 图层。不会把桥接输出送回算法；没有来源信息时不生成 camera_guided 等来源标签，也不生成引导簇或控制预瞄点。
+桥接读取 `ConeArray`、`ConeMap`、`Lane`、`PoseStamped`，产生独立 `/fsd_visualization/*` 图层。不会把桥接输出送回算法；没有来源信息时不生成 camera_guided 等来源标签，也不生成引导簇或控制预瞄点。
 
 此模式仍直接显示已有的相机标注图像、原始雷达、引导簇和控制目标；对应算法未发布时可在配置中关闭。桥接轨迹来自定位估计，采用距离抽样、有界缓存和跳变重置，未经原算法轨迹平滑，和原生轨迹可能存在差异。
 
@@ -62,7 +75,7 @@ Bag 应包含所需输入和 `/tf`、`/tf_static`；回放暂停时 ROS 时间�
 bash start.sh mode:=native velocity_type:=odometry use_sim_time:=false  # 自动打开 RViz
 ```
 
-默认速度源是 `/localization/velocity` 的 `geometry_msgs/msg/TwistStamped`；odometry 模式改为配置的 `nav_msgs/msg/Odometry`。显示 `hypot(vx, vy)`，单位 m/s 和 km/h，是输入速度的平面大小，不保留倒车符号，不等于独立真值或指令速度。
+默认速度源是 `/chcnav/velocity` 的 `geometry_msgs/msg/TwistStamped`；odometry 模式改为配置的 `nav_msgs/msg/Odometry`。显示 `hypot(vx, vy)`，单位 m/s 和 km/h，是输入速度的平面大小，不保留倒车符号，不等于独立真值或指令速度。
 
 ### 停止
 
@@ -167,7 +180,8 @@ Bridge 模式将融合目标、地图、中心线、最终路径和行驶轨迹�
 
 | bridge 输入 | 消息类型 |
 |---|---|
-| fused_cones / cone_map | `wuta_msgs/msg/ConeArray`，含 header、cones、position、color |
+| fused_cones | `wuta_msgs/msg/ConeArray`，含 header、cones、position、color |
+| cone_map | `wuta_msgs/msg/ConeMap`，含五色数组及is_closed |
 | centerline / final_waypoints | `autoware_msgs/msg/Lane`，含 header 和 waypoints 的 pose |
 | pose | `geometry_msgs/msg/PoseStamped` |
 | velocity | `geometry_msgs/msg/TwistStamped` |
@@ -177,7 +191,7 @@ Bridge 模式将融合目标、地图、中心线、最终路径和行驶轨迹�
 
 轨迹按距离采样，缓存有上限；位置跃迁、frame 变化、时间回退会开始新段，避免错误长线。速度过期使用墙钟，ROS 暂停时也会更新状态。
 
-`/fsd_visualization/status` 是 JSON 字符串，包括速度源、速度是否过期、各被订阅输入的墙钟帧龄（尚未收到为 null）、轨迹点数和模式。它只检查辅助节点实际订阅的输入：native 模式不会替 RViz 监测所有原生图层；此时需检查图层话题自身。辅助节点自身异常退出或 RViz 退出，launch 会停止整个显示会话。
+`/fsd_visualization/status` 是 JSON 字符串，包括速度源、速度是否过期、各被订阅输入的墙钟帧龄（尚未收到为 null）、轨迹点数和模式。native与bridge模式均提供算法结果诊断；原生图像/点云Marker图层仍需结合RViz自身Status检查。辅助节点自身异常退出或 RViz 退出，launch 会停止整个显示会话。
 
 ## 5. 诊断与测试
 
@@ -185,7 +199,7 @@ Bridge 模式将融合目标、地图、中心线、最终路径和行驶轨迹�
 
 ```bash
 ros2 topic list -t
-ros2 topic info /localization/velocity -v
+ros2 topic info /chcnav/velocity -v
 ros2 topic info /perception/fused/cones_viz -v
 ros2 run tf2_ros tf2_echo map base_link
 ros2 topic echo /fsd_visualization/status --once --qos-reliability best_effort
@@ -199,7 +213,7 @@ ros2 topic echo /fsd_visualization/status --once --qos-reliability best_effort
 bash check.sh
 ```
 
-测试默认独立 domain 179、仅本机通信；不要将 FSD_VIS_TEST_DOMAIN 设成真实算法/车辆 domain。测试会发布合成锥桶、路径、定位和速度输入，但不发布控制指令。它不启动 RViz GUI；检查真实消息接口、5 m/s 速度计算、速度超时/NaN、空帧清理、坐标帧冲突、轨迹回退/跳变、安装后的 launch 启停，以及辅助发布者没有控制 topic。
+测试默认独立 domain 179、仅本机通信；不要将 FSD_VIS_TEST_DOMAIN 设成真实算法/车辆 domain。测试在隔离域发布合成锥桶、地图、路径、定位、速度、任务和控制指令输入，仅显示节点接收；不启动任何驾驶消费者。它不启动 RViz GUI；检查真实消息接口、5 m/s 速度计算、速度超时/NaN、空帧清理、坐标帧冲突、轨迹回退/跳变、安装后的 launch 启停，以及辅助发布者没有控制 topic。
 
 有可用图形桌面时，可进一步进行窗口检查（每条命令打开并关闭一个 RViz 窗口）：
 
@@ -208,7 +222,7 @@ bash check-gui.sh --mode native
 bash check-gui.sh --mode bridge
 ```
 
-图形检查默认独立 domain 180，会生成合成图像、Marker、定位和测试用静态 TF，检查最终 Best Effort 订阅、进程持续运行和干净退出。测试 TF 仅由测试工具发布，正常 `start.sh` 不发布 TF。该检查不评估相机检测精度、屏幕实际绘制内容或真实驾驶性能。加载图层时可能短暂出现默认 Reliable 订阅的 QoS 警告；检查要求最终订阅都为 Best Effort。
+图形检查默认独立 domain 180，会生成合成图像、Marker、定位和测试用静态 TF，检查最终 Best Effort 订阅（含诊断面板）、进程持续运行和干净退出。测试 TF 仅由测试工具发布，正常 `start.sh` 不发布 TF。该检查不评估相机检测精度、屏幕实际绘制内容或真实驾驶性能。加载图层时可能短暂出现默认 Reliable 订阅的 QoS 警告；检查要求最终订阅都为 Best Effort。
 
 只有自动化检查需要无图形启动时使用 `rviz:=false`；所有上面的用户显示启动默认打开 RViz。默认图像使用 `fsd_rviz_plugins/SafeImage`，保留标准 Image 渲染，修正 Humble 中重复释放订阅连接的问题。长期运行和其他机器上的显卡表现仍需现场验证。
 
@@ -235,3 +249,19 @@ fsd-visualization-code/
 接口以当前 WUTA 消息结构为目标，不保证自动兼容任意第三方 FSD 的消息定义。第三方栈仅使用标准 MarkerArray/Image/PointCloud2 时可用 native 模式并映射话题；如果基础算法消息结构不同，需要改桥接适配代码。
 
 RViz 和 launch 用法参考 [ROS 2 RViz Humble 源码与指南](https://github.com/ros2/rviz/tree/humble/rviz2/doc)、[launch_ros Node 参数接口](https://github.com/ros2/launch_ros/blob/humble/launch_ros/actions/node.py)。
+
+## 7. 固定诊断面板与锥桶坐标表（2026-10-14）
+
+默认RViz右侧打开 **FSD diagnostics**：上方显示任务阶段/实际门控字段、融合诊断、五色地图数量/闭合、中心线/最终路径点数与速度范围、控制速度/转角/开度、华测车体速度、定位、自检和急停输入。单元格悬停可查看完整详情及输入topic。正驱动请求不等于电机已经转动，当前没有驱动轮速反馈。
+
+下方坐标下拉框默认选择“原始雷达/消息坐标系”，实际帧名以融合header为准。切换“车体坐标系 base_link”时显示按采样TF转换的XYZ（米）；不使用最新TF替代。缺少TF/时间戳时，车体XYZ显示`--`并列出原因。表格显示本帧序号、颜色、XYZ及置信度；序号不跨帧稳定，置信度不表示位置精度。
+
+“未收到”区别于“空结果”；“超时（缓存）”保留最后数据用于诊断。输入接收墙钟年龄与可用的采样ROS时间年龄分别显示，默认1秒显示阈值仅用于监控，不代表驾驶门控。急停栏显示末次锁存事件，不因事件不重复发布而清除。显示桥超过2秒无快照时，面板将全部内容标为缓存。台架看控制开度时必须同时看新鲜度；旧正开度不能说明当前仍在请求驱动。
+
+根`start_full_fsd.sh`已默认接入此布局，原`--rviz`/`--no-rviz`选项不变。`--sensor-only`将未启用的下游输入标为未启用。单独只打开显示（不启动硬件）仍使用：
+
+```bash
+FSD_SETUP=/home/wuta/WUTA2026_FINAL/WUTA-FSD/ros2_ws/install/setup.bash bash start.sh mode:=bridge
+```
+
+状态快照消息契约见[主仓库接口文档](https://github.com/707GLobal/WUTA2026_FINAL/blob/main/docs/ROS_INTERFACE.md)。显示桥不发布GO、控制、任务或TF。需要再次构建时运行`bash build.sh`；不会自动修改算法或增加新的权威生产者。

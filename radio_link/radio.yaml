@@ -5,7 +5,7 @@ display_mode: native  # Match the supplied RViz layers; --mode bridge follows th
 velocity_topic: /chcnav/velocity  # real-car source; override for a different deployment.
 serial:
   pc_port: COM3
-  linux_port: ""  # REQUIRED at launch; never guess the INS serial port.
+  linux_port: /dev/serial/by-id/usb-1a86_USB_Serial-if00-port0  # E22 CH340; single matching adapter.
   baud: 9600
 link:
   bytes_per_second: 160  # aggregate, BOTH directions including framing and retries.

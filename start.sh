@@ -6,6 +6,10 @@ source "$(dirname -- "${BASH_SOURCE[0]}")/scripts/environment.sh"
   echo 'Build the visualization package first: bash build.sh' >&2; exit 2;
 }
 source "$FSD_VIS_ROOT/install/local_setup.bash"
+/usr/bin/python3 -c 'from wuta_msgs.msg import ConeArray, ConeMap, MissionState, DevicesInspection; from autoware_msgs.msg import Lane, Command' || {
+  echo 'Missing FSD message environment. Set FSD_SETUP to the existing FSD install/setup.bash and retry.' >&2
+  exit 2
+}
 if [[ "${FSD_VIS_NVIDIA:-0}" == 1 ]]; then
   export __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia
 fi

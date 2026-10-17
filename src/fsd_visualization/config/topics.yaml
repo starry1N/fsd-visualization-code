@@ -22,6 +22,15 @@ topics:
   centerline: /planning/centerline
   final_waypoints: /planning/final_waypoints
   pose: /localization/pose
-  velocity: /localization/velocity
+  velocity: /chcnav/velocity
   # Used only if velocity_type=odometry; no simulator-specific input.
   odometry: /localization/odometry
+  mission: /system/mission_state
+  command: /control/command
+  fusion_status: /perception/fusion/status
+  inspection: /system/devices_inspection
+  localization_ready: /system/localization_ready
+  localization_confidence: /system/localization_confidence
+  global_ready: /planning/global_centerline_ready
+  path_confidence: /planning/path_confidence
+  emergency: /system/emergency

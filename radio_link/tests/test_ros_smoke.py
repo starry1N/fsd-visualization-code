@@ -49,6 +49,15 @@ def test_real_ros_subscriptions_and_extension_round_trip(config, tmp_path, monke
     monkeypatch.setenv("ROS_DOMAIN_ID", "191")
     monkeypatch.setenv("ROS_LOCALHOST_ONLY", "1")
     c = deepcopy(config)
+    # Test this optional layer even when the deployment's RViz template disables it.
+    c["rviz_config"] = str(tmp_path / "test.rviz")
+    with open(config["rviz_config"], encoding="utf-8") as stream:
+        template = yaml.safe_load(stream)
+    display = next(d for d in template["Visualization Manager"]["Displays"]
+                   if d["Name"] == "Final planned path")
+    display["Enabled"] = display["Value"] = True
+    (tmp_path / "test.rviz").write_text(yaml.safe_dump(template), encoding="utf-8")
+    c["resolved_layers"]["path"] = "/planning/final_waypoints_viz"
     c["link"]["bytes_per_second"] = 240
     filename = tmp_path / "radio.yaml"
     filename.write_text(yaml.safe_dump(c), encoding="utf-8")

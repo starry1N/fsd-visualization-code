@@ -10,7 +10,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import TwistStamped, PoseStamped
 from visualization_msgs.msg import Marker, MarkerArray
 from std_msgs.msg import String
-from wuta_msgs.msg import ConeArray, Cone
+from wuta_msgs.msg import ConeArray, Cone, ConeMap
 from autoware_msgs.msg import Lane, Waypoint
 from fsd_visualization.bridge import DisplayBridge
 from fsd_visualization.configuration import render
@@ -63,7 +63,7 @@ def test_bridge_messages_stale_speed_and_reset():
             lambda message, key=name: observed.__setitem__(key, message), bridge.qos))
     publishers = {}
     for name, typ in [('velocity', TwistStamped), ('fused_cones', ConeArray),
-                      ('cone_map', ConeArray), ('centerline', Lane),
+                      ('cone_map', ConeMap), ('centerline', Lane),
                       ('final_waypoints', Lane), ('pose', PoseStamped)]:
         publishers[name] = probe.create_publisher(typ, bridge.topics[name], bridge.qos)
     nodes = [bridge, probe]
@@ -87,8 +87,9 @@ def test_bridge_messages_stale_speed_and_reset():
             lane.waypoints.append(point)
         velocity = TwistStamped()
         velocity.twist.linear.x, velocity.twist.linear.y = 3., 4.
-        for name in ('fused_cones', 'cone_map'):
-            publishers[name].publish(cones)
+        publishers['fused_cones'].publish(cones)
+        cone_map = ConeMap(header=cones.header, blue_cones=[cone])
+        publishers['cone_map'].publish(cone_map)
         for name in ('centerline', 'final_waypoints'):
             publishers[name].publish(lane)
         publishers['velocity'].publish(velocity)

@@ -1,4 +1,7 @@
 <library path="fsd_safe_image">
+  <class name="fsd_rviz_plugins/DiagnosticsPanel" type="fsd_rviz_plugins::DiagnosticsPanel" base_class_type="rviz_common::Panel">
+    <description>Read-only FSD diagnostics and stamped cone coordinates.</description>
+  </class>
   <class name="fsd_rviz_plugins/DashboardImage" type="fsd_rviz_plugins::DashboardImage" base_class_type="rviz_common::Display">
     <description>Safe Image docked left of a shared LiDAR and planning viewport.</description>
   </class>

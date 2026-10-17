@@ -17,3 +17,9 @@
 未执行：Linux ROS 2运行、真实TF与算法话题接入、COM3收发、双模块空口试验、实际已安装Foxglove的界面查看和长期稳定性测试。未启动FSD、惯导、CAN或车辆控制，也未改写无线模块参数。
 
 后续应先按README完成带id的双向Ping/Pong，再逐层增加显示数据，并记录实际数据年龄、重试与往返延迟。当前结果不能证明无线实际吞吐、全部Linux驱动兼容性或全部图层的实时刷新率。
+
+## 2026-10-17 Linux工控机补充验证
+
+在本机系统Python3.10虚拟环境安装Linux/PC/测试依赖，加载已有ROS 2 Humble及FSD消息环境后，完整测试：**30 passed in 18.24s**。包含domain 191的ROS订阅、消息转换及双向扩展测试、TCP串口替身、Foxglove SDK WebSocket；不接触真实硬件。测试显式启用测试需要的可选路径图层，默认无线配置仍服从RViz图层开关。Humble测试插件需要pytest<9。
+
+本机默认E22使用by-id路径，独立启动加载共享环境脚本；`--help`、Bash语法检查通过。真实无线进程曾发送UART数据但RX=0，没有完成双模块空口或Windows接收验证。串口与相机雷达的关系及尚未完成的对照测试见[设备共存检查](../docs/DEVICE_COEXISTENCE.md)。

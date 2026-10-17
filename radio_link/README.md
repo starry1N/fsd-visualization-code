@@ -105,7 +105,7 @@ SDK 锁定 `foxglove-sdk==0.29.2`。当前 SDK 握手使用 `foxglove.sdk.v1`，
 
 ```bash
 cd /path/to/fsd-visualization-code/radio_link
-# 若缺少系统venv模块，先由机器管理员安装 python3-venv。
+# 使用系统 Python；缺少 ensurepip 时可复用已安装的系统 pip。
 bash setup_linux.sh
 
 source /opt/ros/humble/setup.bash
@@ -114,15 +114,19 @@ source /path/to/WUTA-FSD/ros2_ws/install/setup.bash
 export ROS_DOMAIN_ID=42   # 改成真实算法正在使用的domain
 
 ls -l /dev/serial/by-id/
-bash start_linux.sh /dev/serial/by-id/无线模块的真实设备名
+bash start_linux.sh
 ```
 
 上面的 `/path/to`、domain 和串口均须按实机填写。**不要直接猜 `/dev/ttyUSB0`：项目惯导可能正在使用它。** 推荐使用 by-id 的稳定名称。用户需有对应串口权限；本程序不修改权限、不占用已有惯导串口、不关闭其他进程。两端无线模块必须同频段、匹配信道/NETID/空速/密钥，绿色传输模式、RSSI尾字节追加关闭、模块分包240；这些条件通过厂商工具或此前配置确认。
 
+Linux 启动脚本复用 `../scripts/environment.sh` 加载 ROS/FSD 环境；缺少 `.venv` 时会提示先运行 `bash setup_linux.sh`。
+
+本机已确认的 E22 默认路径在 `radio.yaml` 的 `serial.linux_port` 中配置为 `/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0`。不传串口参数时读取该配置；也可传入实际串口路径覆盖。该 CH340 没有唯一序列号，单个同型号适配器时路径通常不随 USB 插口或插入顺序变化，多个同型号设备可能重名，需重新核对。
+
 根入口当前使用 bridge，已有显示桥时：
 
 ```bash
-bash start_linux.sh /dev/serial/by-id/无线模块设备 --mode bridge
+bash start_linux.sh --mode bridge
 ```
 
 如果没有运行显示桥但希望看原生 marker，使用默认 native，并确认算法启用了对应 `_viz` 输出。订阅 QoS 为 Best Effort / Volatile / depth1；不会自动接收订阅前仅发布一次的历史 marker。不存在输入时不生成替代图形。
@@ -234,3 +238,7 @@ Windows离线回归：
 当前交付在Windows完成离线和真实本机WebSocket/虚拟串口测试；**没有ROS 2运行环境、没有连接COM3或无线模块，Linux ROS订阅/真实TF/空口时序及现有Foxglove界面尚需实机验收**。不因此宣称2.4kbps可无损实时传输全部RViz数据。
 
 参考：[Foxglove SDK WebSocket](https://docs.foxglove.dev/docs/sdk/websocket-server)、[Foxglove消息类型](https://docs.foxglove.dev/docs/sdk/schemas)。模块行为依据上级工作目录所附E22 USB手册；本程序只使用已配置好的数据透传通道。
+
+## 本机部署检查
+
+本机串口映射、USB拓扑、资源观察及验证限制见[设备共存检查](../docs/DEVICE_COEXISTENCE.md)。`connected=true`不证明空口连通；检查`rx_bytes`、`peer_session`、`peer_age_s`与输入图层，并完成带ID的Ping/Pong。Linux安装脚本兼容缺少ensurepip但已有系统pip的环境；构建依赖要求setuptools>=64，测试使用pytest<9以兼容Humble测试插件。
