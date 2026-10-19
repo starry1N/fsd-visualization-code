@@ -1,4 +1,4 @@
-"""Essential geometry schema 2. No SDK/ROS dependency or display styles on air."""
+"""Essential geometry schemas 2/3 (source nanoseconds in schema 3). No SDK/ROS dependency or display styles on air."""
 
 import binascii
 import math
@@ -17,8 +17,9 @@ LAYERS = (
 )
 CONES, STRIP, SEGMENTS, POINTS, BOX, ELLIPSOID, CYLINDER, ARROW = range(8)
 FIXED_COLOR_LAYERS = {"centerline", "path", "trajectory", "control"}
-SCHEMA = 2
+SCHEMA = 3
 HEADER = struct.Struct(">BB6sHH")
+TIMED_HEADER = struct.Struct(">BBQHHI")
 
 
 def profile_tag(config):
@@ -89,6 +90,44 @@ class Reader:
         return (value >> 1) ^ -(value & 1)
 
 
+def _time_delta(value):
+    if not isinstance(value, int) or not -(2**63) <= value < 2**63:
+        raise ValueError("timestamp delta outside int64")
+    # Preserve every nanosecond; millisecond-aligned deltas get a compact unit tag.
+    milliseconds = value % 1_000_000 == 0
+    ticks = value // 1_000_000 if milliseconds else value
+    value = (((ticks << 1) ^ (ticks >> 63)) << 1) | (0 if milliseconds else 1)
+    result = bytearray()
+    while value >= 128:
+        result.append((value & 127) | 128)
+        value >>= 7
+    result.append(value)
+    return result
+
+
+def _read_time_delta(reader):
+    value = 0
+    for shift in range(0, 70, 7):
+        byte = reader.take(1)[0]
+        if shift == 63 and byte > 3:
+            raise ValueError("timestamp delta overflow")
+        value |= (byte & 127) << shift
+        if not byte & 128:
+            zigzag = value >> 1
+            delta = (zigzag >> 1) ^ -(zigzag & 1)
+            delta *= 1 if value & 1 else 1_000_000
+            if not -(2**63) <= delta < 2**63:
+                raise ValueError("timestamp delta outside int64")
+            return delta
+    raise ValueError("invalid timestamp delta")
+
+
+def source_stamp(value):
+    if not isinstance(value, int) or isinstance(value, bool) or not 0 <= value < 2**63:
+        raise ValueError("source timestamp must be nonnegative int64 nanoseconds")
+    return value
+
+
 def _rotation(values):
     if len(values) != 4 or not all(math.isfinite(v) for v in values):
         raise ValueError("invalid rotation")
@@ -150,7 +189,11 @@ def encode(message, limit=4096):
     layer = 0 if vehicle else LAYERS.index(message["l"])
     if not vehicle and layer == 0:
         raise ValueError("vehicle is not a scene layer")
-    stamp = message["t"] // 1_000_000
+    version = message.get("e", SCHEMA)
+    if version not in (2, 3):
+        raise ValueError("unsupported essential schema")
+    exact_stamp = source_stamp(message["t"])
+    stamp = exact_stamp // 1_000_000
     source_age = message.get("a", 0)
     if (
         not isinstance(stamp, int)
@@ -160,9 +203,19 @@ def encode(message, limit=4096):
         raise ValueError("timestamp or source age outside essential schema")
     if not isinstance(message["g"], int) or not 0 <= message["g"] <= 65535:
         raise ValueError("invalid profile tag")
+    epoch = message.get("ep", 0)
+    if not isinstance(epoch, int) or not 0 <= epoch <= 0xFFFFFFFF:
+        raise ValueError("invalid clock epoch")
     age = max(0, min(65535, round(source_age * 10)))
     result = bytearray(b"V" if vehicle else b"S")
-    result += HEADER.pack(SCHEMA, layer, stamp.to_bytes(6, "big"), age, message["g"])
+    if version == 3:
+        result += TIMED_HEADER.pack(
+            version, layer, exact_stamp, age, message["g"], epoch
+        )
+    else:
+        result += HEADER.pack(
+            version, layer, stamp.to_bytes(6, "big"), age, message["g"]
+        )
     if vehicle:
         for value in message["p"]:
             result += _signed(value)
@@ -173,6 +226,8 @@ def encode(message, limit=4096):
         if speed is not None and (not math.isfinite(speed) or not 0 <= speed <= 655.34):
             raise ValueError("invalid speed")
         result += struct.pack(">H", 65535 if speed is None else round(speed * 100))
+        if version == 3:
+            result += _time_delta(source_stamp(message["vt"]) - exact_stamp)
     else:
         records = message["o"]
         if len(records) > 256:
@@ -180,6 +235,8 @@ def encode(message, limit=4096):
         result += _unsigned(len(records))
         for record in records:
             _check_record(record)
+            if version == 3:
+                result += _time_delta(source_stamp(record["t"]) - exact_stamp)
             colors = record.get("c", [])
             flags = (
                 (1 if "d" in record else 0)
@@ -222,16 +279,28 @@ def decode(data, limit=4096):
         raise ValueError("essential encoding")
     reader = Reader(data)
     vehicle = reader.take(1) == b"V"
-    version, layer, stamp, age, tag = HEADER.unpack(reader.take(HEADER.size))
-    if version != SCHEMA or layer >= len(LAYERS) or (layer == 0) != vehicle:
+    if len(data) < 2:
+        raise ValueError("truncated essential header")
+    version = data[1]
+    header = TIMED_HEADER if version == 3 else HEADER
+    fields = header.unpack(reader.take(header.size))
+    version, layer, stamp, age, tag = fields[:5]
+    exact_stamp = (
+        source_stamp(stamp)
+        if version == 3
+        else int.from_bytes(stamp, "big") * 1_000_000
+    )
+    if version not in (2, 3) or layer >= len(LAYERS) or (layer == 0) != vehicle:
         raise ValueError("essential schema or layer")
     message = {
-        "e": SCHEMA,
+        "e": version,
         "k": "vehicle" if vehicle else "scene",
-        "t": int.from_bytes(stamp, "big") * 1_000_000,
+        "t": exact_stamp,
         "a": age / 10,
         "g": tag,
     }
+    if version == 3:
+        message["ep"] = fields[5]
     if vehicle:
         message["p"] = [reader.signed() for _ in range(3)]
         rotation = struct.unpack(">4h", reader.take(8))
@@ -241,12 +310,19 @@ def decode(data, limit=4096):
         message["r"] = [v / norm for v in rotation]
         speed = struct.unpack(">H", reader.take(2))[0]
         message["v"] = None if speed == 65535 else speed / 100
+        if version == 3:
+            message["vt"] = source_stamp(exact_stamp + _read_time_delta(reader))
     else:
         message.update(l=LAYERS[layer], o=[])
         count = reader.unsigned()
         if count > 256:
             raise ValueError("too many objects")
         for _ in range(count):
+            object_stamp = (
+                source_stamp(exact_stamp + _read_time_delta(reader))
+                if version == 3
+                else None
+            )
             kind, flags = reader.take(2)
             if flags & ~15 or flags & 12 == 12:
                 raise ValueError("invalid geometry flags")
@@ -262,6 +338,8 @@ def decode(data, limit=4096):
                 points.append(point)
                 previous = point
             record = {"h": kind, "p": points}
+            if version == 3:
+                record["t"] = object_stamp
             if flags & 12:
                 record["c"] = list(reader.take(1 if flags & 4 else size))
             if flags & 1:
@@ -284,7 +362,9 @@ def expanded_records(message, config):
     styles = config["foxglove"]["styles"]
     default_color = styles["colors"].get(layer, styles["colors"]["default"])
     result = []
+    stamps = []
     for index, record in enumerate(message["o"]):
+        before = len(result)
         kind, points = record["h"], record["p"]
         codes = record.get("c", [])
         base = rgb_color(codes[0]) if codes else default_color
@@ -325,4 +405,6 @@ def expanded_records(message, config):
             result.append(
                 [ident, typ, [0, 0, 0], [0, 0, 0, 1], size, base, points, colors, ""]
             )
+        stamps.extend([record.get("t", message["t"])] * (len(result) - before))
+    message["object_stamps"] = stamps
     return result

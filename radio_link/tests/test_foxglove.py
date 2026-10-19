@@ -36,6 +36,7 @@ def test_all_marker_types_sdk_serialization(config):
 def test_real_sdk_websocket_advertise_subscribe_and_client_publish(config):
     c = deepcopy(config)
     c["foxglove"]["port"] = 0
+    c["foxglove"]["alignment_buffer_seconds"] = 0
     sent = []
     view = FoxgloveView(c, sent.append)
 
@@ -70,13 +71,14 @@ def test_real_sdk_websocket_advertise_subscribe_and_client_publish(config):
                 unpack_message(
                     pack_message(
                         {
-                            "e": 2,
+                            "e": 3,
                             "k": "vehicle",
                             "g": profile_tag(config),
                             "t": 7,
                             "p": [1, 2, 0],
                             "r": [0, 0, 0, 1],
                             "v": 3.2,
+                            "vt": 7,
                         }
                     )
                 )
@@ -85,13 +87,13 @@ def test_real_sdk_websocket_advertise_subscribe_and_client_publish(config):
                 unpack_message(
                     pack_message(
                         {
-                            "e": 2,
+                            "e": 3,
                             "k": "scene",
                             "l": "path",
-                            "t": 0,
+                            "t": 7,
                             "a": 0,
                             "g": profile_tag(config),
-                            "o": [{"h": STRIP, "p": [[0, 0, 0], [20, 0, 0]]}],
+                            "o": [{"t": 7, "h": STRIP, "p": [[0, 0, 0], [20, 0, 0]]}],
                         }
                     )
                 )

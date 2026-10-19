@@ -74,16 +74,13 @@ class MarkerCache:
         self.evicted = 0
 
     def apply(self, markers, ros_now_ns):
+        # Compare complete batches: MarkerArray objects may have different source times.
+        batch_stamp = max((m["stamp"] for m in markers), default=0)
+        if batch_stamp and self.source_stamp and batch_stamp < self.source_stamp:
+            self.items.clear()
+        if batch_stamp:
+            self.source_stamp = batch_stamp
         for marker in markers:
-            stamp = marker["stamp"]
-            if stamp and self.source_stamp and stamp < self.source_stamp:
-                self.items.clear()  # A backward ROS clock starts a new visual history.
-            if stamp:
-                self.source_stamp = (
-                    max(stamp, self.source_stamp)
-                    if not stamp < self.source_stamp
-                    else stamp
-                )
             key = (marker["ns"], marker["id"])
             if marker["action"] == 3:
                 self.items.clear()
@@ -116,9 +113,8 @@ def compact_marker(marker, lookup, step, max_points, text_chars):
         math.isfinite(v) for v in (*position, *marker["scale"])
     ):
         raise ValueError("empty frame or non-finite marker")
-    transform = lookup(
-        marker["frame"], 0 if marker["frame_locked"] else marker["stamp"]
-    )
+    # Wireless snapshots freeze geometry at its source time, including frame_locked markers.
+    transform = lookup(marker["frame"], marker["stamp"])
     pos = transform_point(transform, position)
     ori = multiply(transform[1], rotation)
     points = marker["points"]
@@ -187,7 +183,7 @@ def essential_marker(name, marker, lookup, step, max_points):
             points = [position]
     if not points:
         return None
-    record = {"h": kind, "p": points}
+    record = {"h": kind, "p": points, "t": marker["stamp"]}
     if name not in FIXED_COLOR_LAYERS:
         codes = [rgb_code(c) for c in colors] if colors else [rgb_code(rgba)]
         record["c"] = [codes[0]] if all(c == codes[0] for c in codes) else codes
@@ -199,7 +195,7 @@ def essential_marker(name, marker, lookup, step, max_points):
 
 
 def scene_snapshot(
-    name, cache, lookup, config, ros_now_ns, source_age=0.0, diagnostics=None
+    name, cache, lookup, config, ros_now_ns, source_age=0.0, diagnostics=None, epoch=0
 ):
     options = config["layers"][name]
     step = config["geometry"]["quantization_m"]
@@ -225,11 +221,12 @@ def scene_snapshot(
         except (ValueError, LookupError):
             stats["tf_or_geometry_drops"] += 1
     message = {
-        "e": 2,
+        "e": 3,
+        "ep": epoch,
         "k": "scene",
         "l": name,
         "g": profile_tag(config),
-        "t": cache.source_stamp // 1_000_000 * 1_000_000,
+        "t": cache.source_stamp,
         "o": records,
         "a": round(source_age, 1),
     }

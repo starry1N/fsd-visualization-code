@@ -4,9 +4,36 @@
 
 无线模块按用户确认的**透传、9600 8N1、空速 2.4 kbps**使用。程序不发送模块配置命令，不修改频率、密钥、地址、工作模式或功率。Linux 串口读取 `radio.yaml:serial.linux_port`，启动参数可覆盖；使用前核对实际无线模块设备，当前默认by-id路径见部署说明。
 
-## 精简协议升级 2026年10月19日
+## 源时间对齐升级（0.3.0 / schema 3）
 
-当前发送端使用必要数据协议schema 2：固定形状、颜色映射、线宽、锥桶尺寸、标签和显示ID在本机生成。`radio.yaml`中的`foxglove.styles`仅影响本机样式，不走无线；路径/中心线/轨迹/控制目标颜色在本机固定。融合、地图和引导簇的来源显示色保留为单字节RGB332索引，不能把它当作新推断的真实锥桶类别。
+车辆定位、速度和每个保留的Marker均携带各自的完整ROS源时间，精确到纳秒。速度保留`TwistStamped.header.stamp`，不再借用定位时间；同一Marker生成的多个显示对象共享该Marker源时间，Marker本身没有逐点时间时不编造逐点时间。快照保留图层的最新源时间，空快照使用最近一次有效Marker/删除事件的时间。
+
+PC通过官方SDK的`log_time`将源时间写入Foxglove时间轴；场景对象的`timestamp`也使用对应对象源时间。默认本地缓冲3秒，在已缓存的样本中按源时间排序，同一通道超出缓冲后到达的旧样本不回写，计入`/radio/layers.timing.late_drops`。这是源时间排序和低频采样保持，不插值、不要求所有图层同时到达，也不能恢复无线链路未传输的中间帧。缓冲上限512条，满时丢最早入队条目并计数；可调`foxglove.alignment_buffer_seconds`（0～60秒），实际显示延迟还包括无线排队与重组。
+
+速度仪表和曲线使用 **`/radio/speed.speed_m_s`**，该通道以速度自己的源时间发布。`/radio/state`以定位源时间发布，仅当速度与定位源时间相差不超过`foxglove.speed_alignment_tolerance_seconds`（默认0.2秒）时附带速度，否则为`null`；可查看`speed_source_stamp_ns`和`speed_pose_skew_s`。`source_stamp_ns`为十进制字符串，`timestamp.sec/nsec`为整数，避免JavaScript将大整数纳秒值舍入；旧的数值`source_ros_stamp_ns`仅用于兼容。
+
+固定样式不走无线；位置、尺寸、颜色、双向ACK/轮询和调度预算沿用精简方案。`/radio/link`和`/radio/layers`是本机生成的诊断，不占无线业务带宽；图层`stale`随本机监控刷新，业务通道不每秒制造新源样本。较晚订阅的Foxglove仅重播最后已发布样本，保留原源时间。源时钟回退时Linux改变32位时钟epoch；PC清空缓冲与历史，并拒绝已退役epoch的在途旧包。
+
+**升级：先更新并重启Windows接收端，再在Linux拉取并重启发送端。** 0.3.0接收端兼容schema 2及旧J/Z几何；旧版本接收端不能读取schema 3。旧发送端没有独立速度/对象源时间，接收端不能补出，因此旧数据不会生成伪造时间的`/radio/speed`样本。以`/radio/layers`各层`schema=3`确认升级生效，再导入本目录[foxglove_layout.json](foxglove_layout.json)。本机交付副本见`D:\ebyte\output\FSD_E22_源时间对齐.json`。
+
+Linux拉取主项目时，在主项目根执行：
+
+```bash
+git pull --ff-only
+git submodule update --init fsd-visualization-code
+# 已有无线进程需先正常停止，勿同时运行两个串口读者。
+bash fsd-visualization-code/radio_link/setup_linux.sh
+bash fsd-visualization-code/radio_link/start_linux.sh --mode native
+# bridge现场保持原来的--mode bridge；串口沿用已核对的radio.yaml或--port。
+```
+
+源时间为零、上游未填写Header、无Header的空MarkerArray都不能恢复真实采集时间：相关样本不进入对齐显示，`unknown_source_times`计数增加。需要上游生产者填有效Header，清空可发送带时间戳的DELETE/DELETEALL Marker。ACK/轮询为链路控制帧，没有传感器采集时间。
+
+扩展JSON外层新增`t`（纳秒）、`clock_domain`和`time_origin`，两端接收出口保留为`source_stamp_ns`、`clock_domain`、`time_origin`。生产者可在JSON正文提供`source_stamp_ns`（整数或十进制字符串）和`clock_domain`（`ros`或`unix`）；缺省使用Linux ROS入队时间或PC Unix创建时间，并明确标记`time_origin=enqueue`，它不是上游传感器源时间。源时钟必须属于同一时间基准，不能将仿真ROS时间与PC Unix时间直接对齐，也不会根据无线到达时间估算两机钟差。
+
+## 必要几何与本地样式
+
+当前发送端使用必要数据协议schema 3：固定形状、颜色映射、线宽、锥桶尺寸、标签和显示ID在本机生成。`radio.yaml`中的`foxglove.styles`仅影响本机样式，不走无线；路径/中心线/轨迹/控制目标颜色在本机固定。融合、地图和引导簇的来源显示色保留为单字节RGB332索引，不能把它当作新推断的真实锥桶类别。
 
 | 数据 | 无线保留 | 本机生成 |
 | --- | --- | --- |
@@ -18,19 +45,19 @@
 
 不传文字、namespace、原始marker ID、固定frame字符串、重复量化步长或逐快照源端统计。空完整快照表示清除该层，其他快照原子替换该层，因此暂不需要传逐对象删除ID；没有改成增量协议，也没有提高现有调度频率。
 
-**部署顺序：先更新并重启本机接收程序，再更新并重启Linux发送程序。** 新接收端兼容旧J/Z消息；旧接收端不能解析新的S/V/z几何消息，分片ACK成功也不代表图形已解码。双端fixed_frame与quantization_m必须一致，必要帧中的16位配置指纹用于检查常见配置不匹配。更新本机样式不改变该指纹。本次修改和离线验证没有重启当前运行的接收程序。
+**部署顺序见上文。** 分片ACK成功也不代表图形已解码。双端fixed_frame与quantization_m必须一致，必要帧中的16位配置指纹用于检查常见配置不匹配。更新本机样式不改变该指纹。Linux实机验收由部署后的实际状态确认，不能用离线测试替代。
 
-同一组合成场景的双向UART成本比较（含Base64、分片和每片空ACK，不含空口开销、重试或额外扩展消息）：
+同一组合成几何的双向UART成本（含Base64、分片与每片空ACK；不含空口开销、重试与额外扩展消息）。样本含纳秒尾数、独立速度时间、非零epoch，以及各对象相差1毫秒的混合源时间：
 
-| 场景 | 原协议字节 | 精简后字节 | 减少 |
+| 场景 | schema 2 | schema 3 | 增加 |
 | --- | --- | --- | --- |
-| 一份车辆位姿与速度 | 280 | 104 | 62.9% |
-| 24个锥桶 | 768 | 300 | 60.9% |
-| 48点路径 | 884 | 172 | 80.5% |
-| 6个包围框 | 536 | 160 | 70.1% |
-| 空地图清除快照 | 336 | 84 | 75.0% |
+| 一份车辆位姿与速度 | 104 | 116 | 12 |
+| 24个锥桶 | 300 | 460 | 160 |
+| 48点路径 | 172 | 180 | 8 |
+| 6个包围框 | 160 | 184 | 24 |
+| 空地图清除快照 | 84 | 92 | 8 |
 
-复现：`python tools/compare_bandwidth.py`。这是相同几何采样内容的编码对照，不是实机带宽或刷新率承诺；5～10Hz全图层实时刷新仍超出2.4kbps能力。
+复现：`python tools/compare_bandwidth.py`，同时输出最初JSON协议的成本作为参考。对象源时间都相同和任意纳秒尾数的开销会不同，不把表格当成固定包长。总预算仍为160 UART字节/秒，因此增加时间字段后可达到的刷新率可能降低，原调度间隔是目标而非保证；5～10Hz全图层实时刷新仍超出2.4kbps能力。主端在发送前为双向帧预留预算，扩展时间字段导致分片增多也纳入限速。
 
 ## 配置检查结果
 
@@ -81,7 +108,7 @@ Linux 主轮询，PC 只在收到有效轮询后回复，从协议上避免两�
 
 在全部图层开启时，地图/路径的完整低带宽快照可能需要数秒至数十秒，大场景或多次重试时可能超过一分钟。radio.yaml 的 interval 是发送资格的最小间隔，不是保证更新频率。车辆位姿权重较高，但同样受链路占用影响。大幅减少 markers / points 或关闭非必要图层，才能提高其它图层更新速度；禁用输入可在个人 topics.yaml 中置空相应键，再把 radio.yaml 指向它。
 
-几何坐标默认5厘米量化，使用整数变长编码和点间差分。点集按均匀索引抽样，LINE_STRIP保留首尾，LINE_LIST按完整线段抽样，派生引导簇显示为少量采样球点。各图层编码快照最多1200字节，未压缩二进制最多4096字节；超限继续抽稀或舍弃部分对象，源端统计仅保存在Linux `/fsd_radio/status.sampling`，不重复消耗无线。Foxglove `/radio/layers`显示本机解码对象数、接收年龄和过期状态，不再具有schema 2源端抽样计数。因此本程序提供**可辨识的低带宽预览，不是RViz原消息的无损复制**。
+几何坐标默认5厘米量化，使用整数变长编码和点间差分。点集按均匀索引抽样，LINE_STRIP保留首尾，LINE_LIST按完整线段抽样，派生引导簇显示为少量采样球点。各图层编码快照最多1200字节，未压缩二进制最多4096字节；超限继续抽稀或舍弃部分对象，源端统计仅保存在Linux `/fsd_radio/status.sampling`，不重复消耗无线。Foxglove `/radio/layers`显示本机解码对象数、接收年龄和过期状态，不具有源端逐快照抽样计数。因此本程序提供**可辨识的低带宽预览，不是RViz原消息的无损复制**。
 
 当前输入接受ARROW、CUBE、SPHERE、CYLINDER、LINE_STRIP、LINE_LIST、CUBE_LIST、SPHERE_LIST和POINTS；按上表转成必要几何，不保留逐对象原样式或透明度。TEXT_VIEW_FACING标签直接省略；不传MESH_RESOURCE、TRIANGLE_LIST或外部模型资源。车辆四元数量化为4个int16；包围框/范围几何保留非默认姿态和5厘米量化尺寸。缺TF、空frame或非法几何数据会丢弃该对象并在Linux计数，不把传感器坐标冒充map。
 
@@ -121,7 +148,7 @@ demo 只生成明确标记的本机测试图形，不打开COM3、不连接ROS�
 
 1. 打开已安装的 Foxglove，选择 Open connection / Foxglove WebSocket，地址 `ws://127.0.0.1:8765`。
 2. 添加3D面板，固定显示帧设为 `map`，勾选 `/radio/scene/*`，按需本地开启网格。所有图形已在Linux转到固定帧，本机不需要额外ROS TF桥。
-3. 添加 Plot 或 Gauge，用 `/radio/state.speed_m_s` 看速度；`null` 表示不可用，不是0车速。
+3. 添加 Plot 或 Gauge，用 `/radio/speed.speed_m_s` 看速度；`null` 表示不可用，不是0车速。
 4. 添加 Raw Messages，查看 `/radio/link`、`/radio/layers`、`/radio/extension/rx`，检查连接、新鲜度、抽样和双向应答。
 5. 若 fixed_frame 在原 YAML 改为 odom/rslidar，3D面板也使用该帧。
 
@@ -214,13 +241,13 @@ with socket.create_connection(("127.0.0.1", 8766), timeout=3) as s:
 
 ## 时间 截断与断线行为
 
-Linux保持有界 Marker `(namespace,id)` 缓存，处理ADD/DELETE/DELETEALL和ROS时间寿命；ROS时钟回退会清空历史。frame_locked marker按最新TF处理，其他按源时间戳查TF，不用最新车辆位置替代历史检测。
+Linux保持有界 Marker `(namespace,id)` 缓存，处理ADD/DELETE/DELETEALL和ROS时间寿命；ROS时钟回退会清空历史。包括frame_locked marker在内均按源时间戳查TF，冻结为该源时刻的无线快照，不用最新车辆位置替代历史检测。
 
 无线传输的是低频场景快照：全部分片到齐、CRC正确才原子更新该图层，半幅地图不先行覆盖。未完成重组最多12组、120秒超时，消息与片数也有硬上限。实时观测在本机保留最多约10秒，便于低速链路观看，**这与RViz原生1秒marker寿命不同**。地图/规划/轨迹保留到下一快照或清除；保留不代表数据新鲜。
 
-本机用接收墙钟给SDK显示消息标时，并每秒重发缓存，让较晚打开的Foxglove也能看见；来源ROS时间戳保留到毫秒精度，源年龄保留0.1秒精度，记录在metadata与 `/radio/layers` 中。`receive_age_s`、`source_age_lower_bound_s`、`stale`独立暴露。来源年龄为下限，不包含完整无线排队/传输延迟；两台机器时钟未同步时，不把它当作准确端到端延迟。
+本机业务消息的SDK时间与场景对象时间使用上文所述源时间，不使用接收墙钟冒充采集时间。`receive_age_s`、`source_age_lower_bound_s`、`stale`在`/radio/layers`独立暴露；源年龄保留0.1秒精度，其下限不包含完整无线排队/传输延迟。源时间保真不等于已经测得端到端延迟，源端自身的时间正确性仍由生产者负责。
 
-输入中断后，Linux上报的源年龄增长，动态层超时清除。单个长快照仍会保留其开始时的采样时间；大图层在无线途中已经变旧是带宽约束，不能把本机每秒重发当成每秒无线更新。对端会话改变时清空本机缓存；单纯COM拔出时原图形按上述时效规则显示，`/radio/link.connected` 和 peer_age 明确反映断线。
+输入中断后，图层监控的源年龄增长；业务样本不会通过定时重发变成新数据。动态实体的源时间寿命为10秒，地图/规划/轨迹保持到替换或清除；静止的源时间轴不代替断线检测，应查看`/radio/layers`与`/radio/link`。对端会话改变或新的源时钟epoch会清空本机历史。较晚订阅时的缓存重播同样保留原时间，不能把本机重播计作无线更新。
 
 ## 协议和实现索引
 
@@ -242,9 +269,9 @@ fsd_radio/cli.py             linux / pc / inspect / send / demo
 
 扩展消息仍是`J + JSON`或`Z + zlib(JSON)`。必要几何使用`S`场景、`V`车辆，压缩更短时使用`z + zlib(完整S或V消息)`；新接收端也接受旧几何J/Z消息。
 
-S/V公共头在前缀后使用大端`>BB6sHH`：schema=2、图层编号、6字节来源毫秒时间戳、uint16源年龄（0.1秒）、uint16配置指纹。图层编号依次为vehicle、fused、control、guided、map、centerline、path、trajectory。场景随后为对象数与必要几何记录；车辆为3个ZigZag变长坐标、4个int16四元数和uint16厘米/秒速度（FFFF不可用）。
+S/V公共头在前缀后使用大端`>BBQHHI`：schema=3、图层编号、uint64来源纳秒时间戳（限定非负int64）、uint16源年龄（0.1秒）、uint16配置指纹、uint32源时钟epoch。旧schema 2的`>BB6sHH`毫秒头仅为兼容读取。图层编号依次为vehicle、fused、control、guided、map、centerline、path、trajectory。场景随后为对象数与必要几何记录；车辆为3个ZigZag变长坐标、4个int16四元数和uint16厘米/秒速度（FFFF不可用），最后追加速度源时间相对定位源时间的带符号差分。
 
-每个几何记录为类型字节、flags字节、变长点数、逐点XYZ差分ZigZag变长整数；仅在需要时附加单色或逐点RGB332字节、3个变长尺寸、4个int16姿态。flags位0表示尺寸、位1表示姿态、位2表示单色、位3表示逐点色，位2与位3互斥。类型0至7依次为锥桶中心、折线、线段、点集、盒体、椭球、圆柱和双端点箭头。解析器拒绝畸形长度、超限解压和非法几何，不靠USB回调划分消息。
+每个schema 3几何记录先写对象源时间相对快照时间的差分，再写类型字节、flags字节、变长点数、逐点XYZ差分ZigZag变长整数；仅在需要时附加单色或逐点RGB332字节、3个变长尺寸、4个int16姿态。时间差分先将int64纳秒差编码为ZigZag，外加单位标记：差值可整除1,000,000时用毫秒值、标记0，否则用纳秒值、标记1；将`(ZigZag值<<1)|标记`写为最多10字节的变长整数，解码后恢复精确纳秒。flags位0表示尺寸、位1表示姿态、位2表示单色、位3表示逐点色，位2与位3互斥。类型0至7依次为锥桶中心、折线、线段、点集、盒体、椭球、圆柱和双端点箭头。解析器拒绝畸形长度、超限解压和非法几何，不靠USB回调划分消息。
 
 ACK同时用于轮询/应答，没有数据时count=0。每向一个未确认分片最多补发2次；序号与会话去重，图层采用最新值快照，扩展采用FIFO。链路仅支持一对主从无线模块，不是多节点MAC协议。它与前一份开发文档中建议的短消息帧不同，属于针对可视化数据实现的独立协议，两端应部署本目录同一版本。
 
@@ -270,7 +297,7 @@ Windows离线回归：
 5. 拔插任一无线模块、断开对端、停止某输入，验证连接和stale状态、动态层清除、扩展不会自动回放。
 6. 连续记录实际首发成功率、重试后完整快照率、更新周期与双向Ping往返时间，再调整分包和速率预算。
 
-schema 2在Windows完成离线、官方SDK实际WebSocket与虚拟串口测试；本机没有ROS 2环境，此版本没有进行双端无线联调。2026年10月17日曾直接检查旧接收程序COM3，确认有有效无线帧、位姿/速度和轨迹；该结果不能替代新版本验收。Linux ROS订阅、真实TF、空口时序与现有Foxglove界面仍需按版本验证，不因此宣称2.4kbps可无损实时传输全部RViz数据。
+schema 3在Windows完成离线、官方SDK实际WebSocket与虚拟串口测试；本机没有ROS 2环境，此版本没有进行双端无线联调。2026年10月17日曾直接检查旧接收程序COM3，确认有有效无线帧、位姿/速度和轨迹；该结果不能替代新版本验收。Linux ROS订阅、真实TF、空口时序与现有Foxglove界面仍需按版本验证，不因此宣称2.4kbps可无损实时传输全部RViz数据。
 
 参考：[Foxglove SDK WebSocket](https://docs.foxglove.dev/docs/sdk/websocket-server)、[Foxglove消息类型](https://docs.foxglove.dev/docs/sdk/schemas)。模块行为依据上级工作目录所附E22 USB手册；本程序只使用已配置好的数据透传通道。
 

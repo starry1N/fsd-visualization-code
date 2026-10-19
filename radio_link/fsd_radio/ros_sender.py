@@ -4,6 +4,7 @@ import json
 import logging
 import math
 import queue
+import secrets
 import time
 from .geometry import (
     MarkerCache,
@@ -58,10 +59,12 @@ def run_linux(config, port, use_sim_time=False):
             self.subs = []
             self.pose_message = None
             self.speed = None
+            self.speed_stamp = 0
             self.speed_received = 0
             self.pose_received = 0
             self.input_received = {}
             self.last_ros_now = None
+            self.clock_epoch = secrets.randbits(32)
             self.snapshots_last = {}
             self.sampling_stats = {}
             for name, topic in config["resolved_layers"].items():
@@ -176,23 +179,31 @@ def run_linux(config, port, use_sim_time=False):
             v = message.twist.linear
             speed = math.hypot(v.x, v.y)
             self.speed = speed if math.isfinite(speed) else None
+            self.speed_stamp = (
+                message.header.stamp.sec * 10**9 + message.header.stamp.nanosec
+            )
             self.speed_received = time.monotonic()
 
         def extension(self, message):
             try:
                 if len(message.data.encode()) > 512:
                     raise ValueError("extension JSON exceeds 512 bytes")
-                worker.outbox.extension(json.loads(message.data))
+                worker.outbox.extension(
+                    json.loads(message.data), self.get_clock().now().nanoseconds, "ros"
+                )
             except (ValueError, TypeError) as exc:
                 LOG.warning("ROS extension rejected: %s", exc)
 
         def tick(self):
             now_ns = self.get_clock().now().nanoseconds
             if self.last_ros_now is not None and now_ns < self.last_ros_now:
+                self.clock_epoch = (self.clock_epoch + 1) % 2**32
                 for cache in self.caches.values():
                     cache.items.clear()
                     cache.source_stamp = 0
                 self.pose_message = None
+                self.speed = None
+                self.speed_stamp = 0
             self.last_ros_now = now_ns
             wall = time.monotonic()
             for name in self.seen:
@@ -210,6 +221,7 @@ def run_linux(config, port, use_sim_time=False):
                         now_ns,
                         wall - self.input_received[name],
                         self.sampling_stats.setdefault(name, {}),
+                        epoch=self.clock_epoch,
                     )
                     worker.outbox.update(name, snapshot)
                     self.snapshots_last[name] = wall
@@ -232,10 +244,12 @@ def run_linux(config, port, use_sim_time=False):
                     worker.outbox.update(
                         "vehicle",
                         {
-                            "e": 2,
+                            "e": 3,
+                            "ep": self.clock_epoch,
                             "k": "vehicle",
                             "g": profile_tag(config),
-                            "t": stamp // 1_000_000 * 1_000_000,
+                            "t": stamp,
+                            "vt": self.speed_stamp,
                             "p": [
                                 round(v / step)
                                 for v in transform_point(transform, point)
@@ -261,7 +275,17 @@ def run_linux(config, port, use_sim_time=False):
                     continue
                 body = message["body"]
                 self.extension_pub.publish(
-                    String(data=json.dumps(body, ensure_ascii=False))
+                    String(
+                        data=json.dumps(
+                            {
+                                **body,
+                                "source_stamp_ns": str(message.get("t", 0)),
+                                "clock_domain": message.get("clock_domain", "unknown"),
+                                "time_origin": message.get("time_origin", "unknown"),
+                            },
+                            ensure_ascii=False,
+                        )
+                    )
                 )
                 if body.get("type") == "ping":
                     try:
@@ -270,7 +294,9 @@ def run_linux(config, port, use_sim_time=False):
                                 "type": "pong",
                                 "id": body.get("id"),
                                 "linux_time_ns": time.time_ns(),
-                            }
+                            },
+                            self.get_clock().now().nanoseconds,
+                            "ros",
                         )
                     except ValueError as exc:
                         LOG.warning("pong queue full: %s", exc)

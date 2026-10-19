@@ -98,23 +98,30 @@ def run_pc(config, port, demo=False, duration=None):
                 x = math_sine(now - began)
                 view.accept(
                     {
-                        "e": 2,
+                        "e": 3,
                         "k": "vehicle",
                         "g": profile_tag(config),
                         "t": time.time_ns(),
                         "p": [round(x / config["geometry"]["quantization_m"]), 0, 0],
                         "r": [0, 0, 0, 1],
                         "v": 2.5,
+                        "vt": time.time_ns(),
                     }
                 )
                 view.accept(
                     {
-                        "e": 2,
+                        "e": 3,
                         "k": "scene",
                         "l": "path",
                         "g": profile_tag(config),
                         "t": time.time_ns(),
-                        "o": [{"h": STRIP, "p": [[0, 0, 0], [80, 20, 0], [160, 0, 0]]}],
+                        "o": [
+                            {
+                                "t": time.time_ns(),
+                                "h": STRIP,
+                                "p": [[0, 0, 0], [80, 20, 0], [160, 0, 0]],
+                            }
+                        ],
                     }
                 )
                 last_demo = now

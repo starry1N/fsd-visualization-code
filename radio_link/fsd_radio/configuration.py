@@ -121,6 +121,16 @@ def validate(config):
         raise ValueError("snapshot_bytes exceeds max_message_bytes")
     if config["geometry"]["snapshot_bytes"] > link["fragment_bytes"] * 64:
         raise ValueError("snapshot_bytes exceeds 64 fragment capacity")
+    for key in ("alignment_buffer_seconds", "speed_alignment_tolerance_seconds"):
+        value = config["foxglove"].get(
+            key, 3.0 if key == "alignment_buffer_seconds" else 0.2
+        )
+        if (
+            not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            or not 0 <= value <= 60
+        ):
+            raise ValueError(f"foxglove.{key} must be between 0 and 60 seconds")
     styles = config["foxglove"].get("styles")
     if not isinstance(styles, dict):
         raise ValueError(

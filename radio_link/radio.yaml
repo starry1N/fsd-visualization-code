@@ -21,6 +21,8 @@ foxglove:
   port: 8765
   control_port: 8766
   stale_seconds: 10.0
+  alignment_buffer_seconds: 3.0  # Local reorder buffer; does not add radio traffic.
+  speed_alignment_tolerance_seconds: 0.2  # State speed only when source times agree.
   # Local rendering only. These sizes, widths and colors never cross the radio.
   styles:
     cone_size: [0.25, 0.25, 0.4]

@@ -26,8 +26,10 @@ LOOKUP = lambda *args: ((0, 0, 0), (0, 0, 0, 1))
 
 
 def scene(config, records, layer="path"):
+    records = [{"t": 1792248147046000000, **r} for r in records]
     return {
-        "e": 2,
+        "e": 3,
+        "ep": 0,
         "k": "scene",
         "l": layer,
         "t": 1792248147046000000,
@@ -45,7 +47,7 @@ def test_binary_path_has_no_style_or_namespace_and_preserves_geometry(config):
         points=[(0, 0, 0), (1, -1, 0), (2, 3, -0.5)],
     )
     record = essential_marker("path", m, LOOKUP, 0.05, 48)
-    assert set(record) == {"h", "p"}
+    assert set(record) == {"h", "p", "t"}
     assert record["p"] == [[20, 0, 0], [40, -20, 0], [60, 60, -10]]
     message = scene(config, [record])
     data = pack_message(message)
@@ -90,7 +92,7 @@ def test_cones_only_keep_centers_and_color_code(config):
     record = essential_marker(
         "map", marker(type=3, points=[], scale=(0.2, 0.2, 0.5)), LOOKUP, 0.05, 12
     )
-    assert set(record) == {"h", "p", "c"} and record["h"] == CONES
+    assert set(record) == {"h", "p", "c", "t"} and record["h"] == CONES
     assert record["c"] == [224]  # RGB332 red; no invented semantic class.
     assert rgb_color(record["c"][0]) == [255, 0, 0, 255]
     assert (
@@ -120,7 +122,7 @@ def test_boxes_keep_size_and_orientation_arrows_keep_endpoints():
         0.05,
         12,
     )
-    assert arrow == {"h": ARROW, "p": [[20, 40, 0], [80, 40, 0]]}
+    assert arrow == {"t": 1, "h": ARROW, "p": [[20, 40, 0], [80, 40, 0]]}
 
 
 def test_vehicle_one_fragment_and_timestamp_precision(config):
@@ -174,7 +176,7 @@ def test_bad_binary_frames_are_bounded(config):
         data + b"junk",
         b"z" + zlib.compress(b"S" * 10000),
         b"zgarbage",
-        b"S\x03" + data[2:],
+        b"S\x09" + data[2:],
     ):
         with pytest.raises(ValueError):
             decode(invalid)

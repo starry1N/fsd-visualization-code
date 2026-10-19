@@ -9,6 +9,8 @@ ROS 2 Humble + RViz 的独立工作区，适用于已运行的 WUTA-FSD 算法�
 
 2026年10月19日无线组件更新至0.2.0，采用schema 2精简二进制协议：仅传输必要几何、车辆状态及时间信息，固定显示样式在接收端本地配置。升级时先更新并重启Windows接收端，再更新Linux发送端；新版接收端兼容旧格式。刷新频率和160 UART字节/秒总预算保持不变；字节数对比、升级说明及尚未完成实机验证的范围见[无线组件说明](radio_link/README.md)与[验证记录](radio_link/VALIDATION.md)。
 
+2026年10月19日源时间升级：无线组件0.3.0/schema 3保留定位、速度和各Marker独立纳秒源时间，PC缓冲排序后以源时间发布Foxglove消息；速度改用`/radio/speed.speed_m_s`。先升级Windows接收端，再在Linux拉取并重启发送端；布局与源时间缺失的处理见[无线说明](radio_link/README.md)。
+
 ## 独立仓库与主项目引用
 
 独立仓库：[starry1N/fsd-visualization-code](https://github.com/starry1N/fsd-visualization-code)（私有，克隆者需访问权限）。范围包含两个ROS包、显示配置与测试，以及可选E22/Foxglove组件；FSD消息包仍由原算法安装空间提供。

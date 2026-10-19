@@ -10,7 +10,7 @@ from foxglove import messages as m
 from foxglove.channels import SceneUpdateChannel
 from foxglove.websocket import Capability, ServerListener
 from .geometry import multiply, rotate
-from .essentials import expanded_records, profile_tag
+from .essentials import expanded_records, profile_tag, source_stamp
 
 TX_TOPIC = "/fsd_radio/extension/tx"
 
@@ -56,7 +56,7 @@ def entity_from_record(record, frame, step, now_ns, lifetime, source_stamp):
     origin = pose(position, q)
     c = color(rgba)
     fields = dict(
-        timestamp=timestamp(now_ns),
+        timestamp=timestamp(source_stamp),
         frame_id=frame,
         id=ident,
         lifetime=m.Duration(sec=int(lifetime), nsec=int(lifetime % 1 * 1e9)),
@@ -146,6 +146,13 @@ class PublishListener(ServerListener):
         self.enqueue = enqueue
         self.channels = {}
         self.errors = queue.Queue(maxsize=32)
+        self.subscriptions = queue.Queue(maxsize=128)
+
+    def on_subscribe(self, client, channel):
+        try:
+            self.subscriptions.put_nowait(channel.topic)
+        except queue.Full:
+            pass
 
     def on_client_advertise(self, client, channel):
         if channel.topic == TX_TOPIC and channel.encoding == "json":
@@ -179,9 +186,29 @@ class FoxgloveView:
         }
         self.json_channels = {
             name: foxglove.Channel("/radio/" + name, context=self.context)
-            for name in ("state", "link", "layers", "extension/rx", "extension/status")
+            for name in (
+                "state",
+                "speed",
+                "link",
+                "layers",
+                "extension/rx",
+                "extension/status",
+            )
         }
         self.snapshots = {}
+        self.pending = []
+        self.replay = {}
+        self.clock_epoch = None
+        self.retired_epochs = set()
+        self.last_published = {}
+        self.last_sample = {}
+        self.latest_source_ns = 0
+        self.timing = {
+            "late_drops": 0,
+            "unknown_source_times": 0,
+            "buffer_overflows": 0,
+        }
+        self.buffer_seconds = config["foxglove"].get("alignment_buffer_seconds", 3.0)
         self.lock = threading.RLock()
         self.server = foxglove.start_server(
             name="FSD E22 2.4kbps",
@@ -193,13 +220,61 @@ class FoxgloveView:
             server_listener=self.listener,
         )
 
-    def log(self, name, value):
-        self.json_channels[name].log(value)
+    def log(self, name, value, log_time=None):
+        stamp = self.latest_source_ns if log_time is None else log_time
+        channel = self.json_channels[name]
+        self.replay["/radio/" + name] = (channel, value, stamp)
+        channel.log(value, log_time=stamp)
+
+    def _queue_sample(self, key, message, stamp, received):
+        source_stamp(stamp)
+        # Zero means unavailable in this protocol; never relabel it as receipt time.
+        if not stamp:
+            self.timing["unknown_source_times"] += 1
+            return
+        signature = repr({k: v for k, v in message.items() if k != "a"})
+        if self.last_sample.get(key) == signature:
+            return
+        self.last_sample[key] = signature
+        if len(self.pending) >= 512:
+            self.pending.pop(0)
+            self.timing["buffer_overflows"] += 1
+        self.pending.append((received, stamp, key, message))
+
+    def flush(self, now=None):
+        now = time.monotonic() if now is None else now
+        ready = [
+            event for event in self.pending if now - event[0] >= self.buffer_seconds
+        ]
+        if not ready:
+            return
+        cutoff = max(event[1] for event in ready)
+        ready = [event for event in self.pending if event[1] <= cutoff]
+        self.pending = [event for event in self.pending if event[1] > cutoff]
+        for received, stamp, key, message in sorted(ready, key=lambda e: e[1]):
+            if stamp < self.last_published.get(key, 0):
+                self.timing["late_drops"] += 1
+                continue
+            self.last_published[key] = stamp
+            if key != "extension/rx":
+                self.latest_source_ns = max(self.latest_source_ns, stamp)
+            if key == "speed":
+                self.log("speed", message, stamp)
+            elif key == "extension/rx":
+                self.log(key, message, stamp)
+            else:
+                self.render(key, message, now - received)
 
     def clear(self):
+        last_stamp = self.latest_source_ns
         with self.lock:
             self.snapshots.clear()
-        now = time.time_ns()
+            self.pending.clear()
+            self.replay.clear()
+            self.last_published.clear()
+            self.last_sample.clear()
+            self.latest_source_ns = 0
+        now = last_stamp
         for channel in self.channels.values():
             channel.log(
                 m.SceneUpdate(
@@ -208,14 +283,37 @@ class FoxgloveView:
                             timestamp=timestamp(now), type=m.SceneEntityDeletionType.All
                         )
                     ]
-                )
+                ),
+                log_time=now,
             )
 
     def accept(self, message):
+        received = time.monotonic()
         if message["k"] == "extension":
-            self.log("extension/rx", message["body"])
+            payload = {
+                **message["body"],
+                "source_stamp_ns": str(message.get("t", 0)),
+                "clock_domain": message.get("clock_domain", "unknown"),
+                "time_origin": message.get("time_origin", "unknown"),
+            }
+            self._queue_sample("extension/rx", payload, message.get("t", 0), received)
+            self.flush(received)
             return
-        if message.get("e") == 2:
+        if self.clock_epoch is not None and message.get("e") != 3:
+            self.timing["late_drops"] += 1
+            return
+        if message.get("e") == 3:
+            epoch = message.get("ep", 0)
+            if epoch in self.retired_epochs:
+                self.timing["late_drops"] += 1
+                return
+            if self.clock_epoch is not None and epoch != self.clock_epoch:
+                self.retired_epochs.add(self.clock_epoch)
+                if len(self.retired_epochs) > 64:
+                    self.retired_epochs.pop()
+                self.clear()
+            self.clock_epoch = epoch
+        if message.get("e") in (2, 3):
             if message["g"] != profile_tag(self.config):
                 raise ValueError(
                     "fixed frame or quantization differs between endpoints"
@@ -231,18 +329,46 @@ class FoxgloveView:
         if key not in self.channels:
             raise ValueError("unknown scene layer")
         with self.lock:
-            self.snapshots[key] = (message, time.monotonic())
-        self.render(key, message, 0.0)
+            previous = self.snapshots.get(key)
+            if previous is None or message["t"] >= previous[0]["t"]:
+                self.snapshots[key] = (message, received)
+        self._queue_sample(key, message, message["t"], received)
+        if message["k"] == "vehicle":
+            speed_stamp = message.get("vt", 0)
+            speed_value = {
+                "speed_m_s": message.get("v"),
+                "source_stamp_ns": str(speed_stamp),
+                "timestamp": {"sec": speed_stamp // 10**9, "nsec": speed_stamp % 10**9},
+            }
+            self._queue_sample("speed", speed_value, speed_stamp, received)
+        self.flush(received)
 
     def render(self, key, message, age):
-        now = time.time_ns()
+        now = message["t"]
         lifetime = self.config["foxglove"]["stale_seconds"]
         frame = message["f"]
         source_age = age + message.get("a", 0)
+        speed_stamp = message.get("vt", 0)
+        speed_skew = abs(now - speed_stamp) / 1e9 if speed_stamp else None
+        matched_speed = (
+            message.get("v")
+            if speed_skew is not None
+            and speed_skew
+            <= self.config["foxglove"].get("speed_alignment_tolerance_seconds", 0.2)
+            else None
+        )
         if message["k"] == "vehicle":
             if source_age > lifetime:
                 self.log(
-                    "state", {"stale": True, "speed_m_s": None, "receive_age_s": age}
+                    "state",
+                    {
+                        "stale": True,
+                        "speed_m_s": None,
+                        "receive_age_s": age,
+                        "source_stamp_ns": str(now),
+                        "timestamp": {"sec": now // 10**9, "nsec": now % 10**9},
+                    },
+                    log_time=now,
                 )
                 records = []
             else:
@@ -250,13 +376,18 @@ class FoxgloveView:
                     "state",
                     {
                         "stale": False,
-                        "speed_m_s": message.get("v"),
+                        "speed_m_s": matched_speed,
+                        "speed_source_stamp_ns": str(speed_stamp),
+                        "speed_pose_skew_s": speed_skew,
                         "source_ros_stamp_ns": message["t"],
+                        "source_stamp_ns": str(message["t"]),
+                        "timestamp": {"sec": now // 10**9, "nsec": now % 10**9},
                         "receive_age_s": round(age, 2),
                         "pose": message["p"],
                         "orientation": message["r"],
                         "frame_id": frame,
                     },
+                    log_time=now,
                 )
                 records = [
                     [
@@ -276,6 +407,7 @@ class FoxgloveView:
             # Live observations clear on stale; map/planned/trajectory remain, with age in /radio/layers.
             if key in ("guided", "fused", "control") and source_age > lifetime:
                 records = []
+        stamps = message.get("object_stamps", [message["t"]] * len(records))
         entities = [
             entity_from_record(
                 r,
@@ -283,30 +415,37 @@ class FoxgloveView:
                 message["q"],
                 now,
                 lifetime if key in ("guided", "fused", "control", "vehicle") else 0,
-                message["t"],
+                stamp,
             )
-            for r in records
+            for r, stamp in zip(records, stamps)
+            if stamp > 0
         ]
         update = m.SceneUpdate(
             deletions=[
                 m.SceneEntityDeletion(
-                    timestamp=timestamp(now - 1), type=m.SceneEntityDeletionType.All
+                    timestamp=timestamp(max(0, now - 1)),
+                    type=m.SceneEntityDeletionType.All,
                 )
             ],
             entities=entities,
         )
-        self.channels[key].log(update)
+        self.replay["/radio/scene/" + key] = (self.channels[key], update, now)
+        self.channels[key].log(update, log_time=now)
 
     def refresh(self):
-        # Re-emit cached geometry for a Foxglove client opened after radio reception.
-        # The original source stamp is unchanged and age is ALWAYS exposed separately.
+        # Emit each source sample once. Diagnostic refreshes never create source samples.
         now = time.monotonic()
+        self.flush(now)
+        while not self.listener.subscriptions.empty():
+            cached = self.replay.get(self.listener.subscriptions.get_nowait())
+            if cached:
+                channel, value, stamp = cached
+                channel.log(value, log_time=stamp)
         ages = {key: {"received": False, "stale": True} for key in self.channels}
         with self.lock:
             snapshots = list(self.snapshots.items())
         for key, (message, received) in snapshots:
             age = now - received
-            self.render(key, message, age)
             ages[key] = {
                 "received": True,
                 "receive_age_s": round(age, 2),
@@ -314,11 +453,23 @@ class FoxgloveView:
                 "stale": age + message.get("a", 0)
                 > self.config["foxglove"]["stale_seconds"],
                 "source_ros_stamp_ns": message["t"],
+                "source_stamp_ns": str(message["t"]),
+                "source_time_known": message["t"] > 0,
                 "sampling": message.get("s", {}),
                 "schema": message.get("e", 1),
                 "display_objects": len(message.get("o", [])),
             }
-        self.log("layers", ages)
+        self.log(
+            "layers",
+            {
+                **ages,
+                "timing": {
+                    **self.timing,
+                    "pending": len(self.pending),
+                    "buffer_seconds": self.buffer_seconds,
+                },
+            },
+        )
         if "vehicle" not in self.snapshots:
             self.log("state", {"stale": True, "speed_m_s": None, "receive_age_s": None})
         while not self.listener.errors.empty():

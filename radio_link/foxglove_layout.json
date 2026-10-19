@@ -1,0 +1,134 @@
+{
+  "configById": {
+    "3D!2tqi6tm": {
+      "topics": {
+        "/radio/scene/centerline": {
+          "visible": true
+        },
+        "/radio/scene/control": {
+          "visible": true
+        },
+        "/radio/scene/fused": {
+          "visible": true
+        },
+        "/radio/scene/guided": {
+          "visible": true
+        },
+        "/radio/scene/map": {
+          "visible": true
+        },
+        "/radio/scene/path": {
+          "visible": true
+        },
+        "/radio/scene/trajectory": {
+          "visible": true
+        },
+        "/radio/scene/vehicle": {
+          "visible": true
+        }
+      },
+      "layers": {
+        "fdd4b974-d651-4c36-bd91-51304ff7d3fd": {
+          "layerId": "foxglove.Grid",
+          "instanceId": "fdd4b974-d651-4c36-bd91-51304ff7d3fd"
+        }
+      },
+      "cameraState": {
+        "perspective": true,
+        "distance": 35.16173831818581,
+        "phi": 60.00000000002606,
+        "thetaOffset": 60.0000000000292,
+        "targetOffset": [
+          7.050764646418306,
+          -2.5828861377448007,
+          -1.072262948271269e-15
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {},
+      "transforms": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "synchronize": false,
+      "imageMode": {},
+      "foxglovePanelTitle": "无线场景"
+    },
+    "RawMessages!3qsca5q": {
+      "topicPath": "/radio/state",
+      "defaultExpanded": false,
+      "foxglovePanelTitle": "车辆状态 / 数据有效性"
+    },
+    "Gauge!1hib8b8": {
+      "path": "/radio/speed.speed_m_s",
+      "style": "dial",
+      "minValue": 0,
+      "maxValue": 20,
+      "tickInterval": 5,
+      "showTicks": true,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": [
+        "#0000ff",
+        "#ff00ff"
+      ],
+      "reverse": false,
+      "reverseDirection": false,
+      "foxglovePanelTitle": "车速 (m/s)"
+    },
+    "Plot!3jxfb5t": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/radio/speed.speed_m_s",
+          "enabled": true,
+          "color": "#4e98e2",
+          "id": "9dc9c91c-a721-4ede-8081-aebdc829764a",
+          "label": "车速 (m/s)"
+        }
+      ],
+      "foxglovePanelTitle": "车速曲线 (m/s)"
+    }
+  },
+  "layout": {
+    "direction": "row",
+    "splitPercentage": 60,
+    "first": "3D!2tqi6tm",
+    "second": {
+      "direction": "column",
+      "splitPercentage": 45,
+      "first": {
+        "direction": "row",
+        "splitPercentage": 45,
+        "first": "Gauge!1hib8b8",
+        "second": "RawMessages!3qsca5q"
+      },
+      "second": "Plot!3jxfb5t"
+    }
+  },
+  "globalVariables": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "userNodes": {}
+}

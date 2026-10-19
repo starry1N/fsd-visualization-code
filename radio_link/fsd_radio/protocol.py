@@ -104,7 +104,7 @@ class Framer:
 
 
 def pack_message(message, limit=4096):
-    if message.get("e") == 2:
+    if message.get("e") in (2, 3):
         from .essentials import encode
 
         return encode(message, limit)

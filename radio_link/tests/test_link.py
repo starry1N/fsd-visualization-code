@@ -42,13 +42,14 @@ def test_retry_duplicate_ack_and_session_guard(config):
     rx = []
     a, b = pair(config, lambda msg: None, rx.append)
     a.outbox.extension({"id": "one", "text": "hello"})
-    packet = a.packet()
-    assert b.receive(packet)
-    assert b.receive(packet)
+    while a.outbox.extensions:
+        packet = a.packet()
+        assert b.receive(packet)
+        assert b.receive(packet)
+        reply = b.packet()
+        assert a.receive(reply) and a.pending is None
+        assert not a.acknowledged(reply)
     assert len(rx) == 1
-    reply = b.packet()
-    assert a.receive(reply) and a.pending is None
-    assert not a.acknowledged(reply)
     assert b.receive(Packet(MASTER, 999, 1))
     assert not b.receive(packet)  # Never resurrect the retired sender session.
 

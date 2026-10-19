@@ -17,7 +17,7 @@ def marker(
         id=index,
         type=typ,
         action=0,
-        stamp=1792248147046000000,
+        stamp=1792248147046376568 + index * 1_000_000,
         frame="map",
         frame_locked=False,
         lifetime_ns=0,
@@ -33,7 +33,7 @@ def marker(
 
 def cases(config):
     lookup = lambda *args: ((0, 0, 0), (0, 0, 0, 1))
-    stamp = 1792248147046000000
+    stamp = 1792248147046376568
     vehicle = dict(
         k="vehicle",
         f="map",
@@ -45,7 +45,7 @@ def cases(config):
         a=0.1,
     )
     essential = {k: v for k, v in vehicle.items() if k not in ("f", "q")}
-    essential.update(e=2, g=profile_tag(config))
+    essential.update(e=3, ep=0x12345678, g=profile_tag(config), vt=stamp - 123456789)
     result = [("vehicle", vehicle, essential)]
     palette = [
         (255, 0, 0, 255),
@@ -146,6 +146,10 @@ def measure(config):
             dict(
                 case=name,
                 before=before,
+                schema2=costs(
+                    {**new, "e": 2, "t": new["t"] // 1_000_000 * 1_000_000},
+                    config["link"]["fragment_bytes"],
+                ),
                 after=after,
                 uart_saving_percent=round(
                     100

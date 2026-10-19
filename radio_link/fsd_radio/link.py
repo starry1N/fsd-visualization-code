@@ -52,10 +52,36 @@ class Outbox:
         with self.lock:
             self.latest[key] = packed
 
-    def extension(self, body):
+    def extension(self, body, source_time_ns=None, clock_domain="unix"):
         if not isinstance(body, dict):
             raise ValueError("extension must be a JSON object")
-        raw = pack_message({"k": "extension", "body": body}, 512)
+        from .essentials import source_stamp
+
+        stamp = body.get("source_stamp_ns", source_time_ns)
+        if stamp is None:
+            stamp = time.time_ns()
+        if (
+            isinstance(stamp, str)
+            and stamp.isascii()
+            and stamp.isdecimal()
+            and len(stamp) <= 19
+        ):
+            stamp = int(stamp)
+        stamp = source_stamp(stamp)
+        origin = "provided" if "source_stamp_ns" in body else "enqueue"
+        domain = body.get("clock_domain", clock_domain)
+        if domain not in ("ros", "unix"):
+            raise ValueError("clock_domain must be ros or unix")
+        raw = pack_message(
+            {
+                "k": "extension",
+                "body": body,
+                "t": stamp,
+                "clock_domain": domain,
+                "time_origin": origin,
+            },
+            512,
+        )
         with self.lock:
             if len(self.extensions) >= self.config["link"]["extension_queue"]:
                 raise ValueError("extension queue full")
@@ -255,9 +281,18 @@ class Endpoint:
 
     def run(self, stop):
         settings = self.config["link"]
+        pace_start, charged = time.monotonic(), 0
         while not stop.is_set():
             if self.role == MASTER:
-                began = time.monotonic()
+                # Reserve both directions BEFORE sending; at most one wire frame of burst.
+                request_size = len(self.packet().encode())
+                reservation = request_size + MAX_WIRE
+                burst_allowance = MAX_WIRE
+                wait = (charged + reservation - burst_allowance) / settings[
+                    "bytes_per_second"
+                ] - (time.monotonic() - pace_start)
+                if stop.wait(max(0, wait)):
+                    break
                 sent = self.transmit()
                 expected = self.pending[0]
                 rx_before = self.transport.rx_bytes
@@ -278,11 +313,9 @@ class Endpoint:
                 received = max(
                     self.transport.rx_bytes - rx_before, MAX_WIRE if self.pending else 0
                 )
-                elapsed = time.monotonic() - began
-                stop.wait(
-                    max(0, (sent + received) / settings["bytes_per_second"] - elapsed)
-                    + settings["turnaround_seconds"]
-                )
+                charged += sent + received
+                if stop.wait(settings["turnaround_seconds"]):
+                    break
             else:
                 poll = self.transport.receive(0.1)
                 if poll and poll.role == MASTER and self.receive(poll):
