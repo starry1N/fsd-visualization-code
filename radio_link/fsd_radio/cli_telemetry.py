@@ -1,6 +1,6 @@
-"""Durable CLI event transfer and snapshots of the existing CLI sensor collector.
+"""Durable essential CLI event transfer and snapshots of the existing CLI collector.
 
-The manager journal is the source spool. File offsets advance only after a PC disk ACK.
+The selected manager journal is the source spool. Offsets advance after a PC disk ACK.
 No ROS or Foxglove import here; serial I/O remains owned by RadioWorker.
 """
 
@@ -124,18 +124,18 @@ class CliForwarder:
         # Only this manager's journal format, never modules/*.log or ROS logs.
         self.files = {
             stream_id(p): p
-            for p in sorted((self.root / "logs").glob("*/*/manager.events.jsonl"))
+            for p in sorted((self.root / "logs").glob("*/*/manager.radio.events.jsonl"))
         }
         try:
             current = json.loads(self.state_file.read_text(encoding="utf-8"))
-            if current.get("log_events"):
-                journal = Path(current["log_events"])
-                if journal.name == "manager.events.jsonl" and journal.is_file():
+            if current.get("radio_log_events"):
+                journal = Path(current["radio_log_events"])
+                if journal.name == "manager.radio.events.jsonl" and journal.is_file():
                     self.files[stream_id(journal)] = journal
             self.source_warning = (
                 None
-                if current.get("log_events")
-                else "Upgrade and restart CLI to create timestamped manager.events.jsonl"
+                if current.get("radio_log_events")
+                else "Upgrade and restart CLI to create essential manager.radio.events.jsonl"
             )
         except (OSError, ValueError):
             self.source_warning = (

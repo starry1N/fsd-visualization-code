@@ -4,13 +4,21 @@
 
 无线模块按用户确认的**透传、9600 8N1、空速 2.4 kbps**使用。程序不发送模块配置命令，不修改频率、密钥、地址、工作模式或功率。Linux 串口读取 `radio.yaml:serial.linux_port`，启动参数可覆盖；使用前核对实际无线模块设备，当前默认by-id路径见部署说明。
 
-## CLI完整实时日志与传感器（0.4.0）
+## CLI必要日志与传感器（0.5.0）
 
-转发CLI“实时日志”的新增内容：启动、检查、任务变化、失败原因、多行堆栈全部保留，不截断、不筛选等级、不因重复文字而删除。发送源为日志原有唯一写入者同步生成的`manager.events.jsonl`，不是每0.2秒重发界面或历史尾部，也不是所有`modules/*.log`的全文。已有`manager.log`保持原内容；旧CLI未生成事件journal的历史不会猜测源时间回填。
+按当前CLI的实际输出筛选无线日志，Linux的`manager.log`和`manager.events.jsonl`继续保留全文。原日志写入者在旁边生成独立的`manager.radio.events.jsonl`作为无线源，单独stream ID与断点；不读取界面刷新，也不转发所有`modules/*.log`全文。0.4.0的未筛选journal不再自动排队，也不删除其本地历史；新策略从CLI重启后的事件生效，不回填历史或猜测源时间。
+
+| 无线保留 | 只留Linux本地 |
+| --- | --- |
+| 错误、警告与完整多行正文；后续连续异常堆栈、命令和失败日志尾部 | 菜单/快捷键、窗口打开、正常权限提示、日志路径提示 |
+| 任务监控的阶段、模式选择、圈数、GO、急停、门控与设备自检变化 | 逐项预检查成功、模块启动和话题等待进度 |
+| 预检查汇总、启动提交、全栈启动完成、运行退出码和进程清理结果 | 普通构建进度和其余未匹配的info/title输出 |
+
+规则在CLI `log_context.py:necessary_radio_event`统一实施，交互与独立全栈入口共用。故障上下文保留到下一条带明确启动器标签的正常阶段、界面提示或运行汇总；模块日志的ROS `[INFO]`不会截断故障尾部。保留事件的文字、等级、源时间不缩写、不截断，不合并重复故障。未知info默认不传；若以后新增关键事件，应同步扩展此规则与回归。传感器状态仍通过独立快照通道发送。
 
 Manager在记录事件时保存Unix纳秒源时间、等级及完整文字。直接全栈入口的现有`tools/run_logged.py`收集器也记录完整原文，时间为源端收集事件的时刻，正文自带的子进程日志时间保留。无线源端读取事件文件新增字节；接收端按stream ID与字节偏移写入磁盘，`flush/fsync`成功后才发业务确认。Linux仅在收到该确认后提交断点；分片ACK不代替磁盘确认。应用确认丢失、串口重连或双方程序重启后可从断点重传，PC校验已存在字节并去除传输重复；归档移动目录保持stream ID。未确认内容保留在Linux原journal，不能删除这些源文件或清掉断点来“清队列”。
 
-日志源量持续超过无线吞吐时会积压，完整不等于零延迟；不通过丢日志追赶实时。Linux `/fsd_radio/status.cli`和PC `/radio/cli/transfer.backlog_bytes`显示当前可发现journal的待确认字节数（含事件元数据），以及源文件、状态采集错误。PC原始journal与完整文字分别存为`cli.pc_storage/<stream>.events.jsonl`和`<stream>.manager.log`，默认`~/.fsd_radio/cli_received`。磁盘空间不足、源文件被外部删除等情况不能靠无线恢复；故障会暴露，不把失败记为成功。单条事件超过16 MiB时仍完整落盘，Foxglove投影暂停并报警；UI缓存最多2000条/4 MiB，完整历史以本机文件为准。
+筛选后的日志量持续超过无线吞吐仍会积压，不能保证零延迟。Linux `/fsd_radio/status.cli`和PC `/radio/cli/transfer.backlog_bytes`显示必要journal的待确认字节数（含事件元数据），以及源文件、状态采集错误。PC收到的必要journal与其文字分别存为`cli.pc_storage/<stream>.events.jsonl`和`<stream>.manager.log`，默认`~/.fsd_radio/cli_received`；CLI全部历史以Linux原文件为准。磁盘空间不足、源文件被外部删除等情况不能靠无线恢复；故障会暴露，不把失败记为成功。单条事件超过16 MiB时仍完整落盘，Foxglove投影暂停并报警；UI缓存最多2000条/4 MiB。
 
 CLI传感器状态复用原`dashboard.py`采集：**GNSS、惯导、雷达、相机、融合**，包含采样时的在线/超时、频率、最后接收年龄及原详情（例如GNSS状态、惯导位置速度、点数、图像分辨率和融合锥桶数）。不增加图像/点云无线传输。状态快照使用CLI生成时间，各项保留原Header时间；无Header或零Header标记未知，另保留源端接收时间，不冒充采集时间。CLI采集缓存超过3秒未更新会标为过期；PC `/radio/cli/health`还标记无线接收年龄，不能把旧的“在线”当作当前在线。状态按最新值发送，不像日志那样逐次排队。
 
@@ -18,7 +26,7 @@ Foxglove布局新增“CLI 日志与传感器”页：
 
 | 通道 | 内容 |
 | --- | --- |
-| `/radio/cli/log` | 官方`foxglove.Log`，日志源时间、等级、完整文字 |
+| `/radio/cli/log` | 官方`foxglove.Log`，必要事件的源时间、等级、完整文字 |
 | `/radio/cli/sensors` | 五项传感器原详情、源时间和采样时的状态 |
 | `/radio/cli/vehicle` | CLI已采集的任务/自检/模式/GO/急停/控制请求摘要，不推断未发布的赛项内部状态 |
 | `/radio/cli/transfer` | 日志待确认字节数、采集器错误 |

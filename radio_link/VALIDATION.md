@@ -1,5 +1,13 @@
 # 无线遥测验证记录
 
+## 2026年10月19日 必要CLI日志（0.5.0）
+
+- 根据当前CLI/启动器输出点筛选：错误、警告及连续故障上下文、任务监控变化和启动/退出汇总进入独立`manager.radio.events.jsonl`；完整CLI原文仍保存在Linux。未取得Linux当前运行日志，本轮不是实车日志流量测量。
+- Windows本机`python -m pytest -q`：**78 passed，1 skipped**（缺少rclpy的ROS smoke）。相关Python编译、F级静态检查通过；未使用WSL。
+- 以当前CLI原格式覆盖菜单、逐项成功、启动等待、构建进度、窗口提示、预检查汇总、任务阶段/圈数/GO/门控、警告、shell命令/权限错误、多行堆栈、退出和清理。全文journal保留全部事件，必要journal只保留预期事件且源时间一致。
+- 必要事件经真实CliForwarder→编码→CliReceiver链路完整投影；验证旧全文journal不进入无线队列，两个journal有不同stream ID和偏移，故障上下文不串到其他会话。此前磁盘确认、丢确认、重启恢复及WebSocket源时间回归仍通过。
+- 本轮不重启当前PC接收程序，不部署Linux；L/b/A与cli_status协议未改。Linux需要同时更新CLI及显示子模块，重新启动CLI与无线发送进程后生效。关键日志突发仍可排队；未知info会被舍弃，今后新增关键事件须扩展筛选规则。
+
 ## 2026年10月19日 CLI完整日志与传感器（0.4.0）
 
 - 本轮只在Windows本机验证，未使用WSL完成测试，也未运行Linux ROS或车辆硬件。

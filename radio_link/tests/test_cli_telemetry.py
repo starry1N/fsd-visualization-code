@@ -50,12 +50,14 @@ def make_source(tmp_path, texts):
         module.append_manager_event(
             path,
             text,
-            "error" if "Traceback" in text else "info",
+            "error",
             1792395769315376568 + i,
         )
         for i, text in enumerate(texts)
     ]
-    return path.with_name("manager.events.jsonl"), events
+    source = path.with_name("manager.radio.events.jsonl")
+    events = [json.loads(line) for line in source.read_text(encoding="utf-8").splitlines()]
+    return source, events
 
 
 @pytest.mark.parametrize("size", [1, 64, 512, 2048])
@@ -426,3 +428,84 @@ def test_stream_identity_survives_rename_and_same_directory_name_is_not_reused(t
     assert e1['stream_id']!=e2['stream_id']
     module.append_manager_event(first,'more\n','info',3)
     assert stream_id(first.with_name('manager.events.jsonl'))==e1['stream_id']
+
+
+def test_essential_policy_keeps_operational_events_and_full_failure_context(config, tmp_path):
+    module = source_module('log_context')
+    log = tmp_path / 'linux/logs/sessions/run/manager.log'
+    log.parent.mkdir(parents=True)
+    samples = [
+        ('终端已就绪。按 C 检查', 'title', False),
+        ('[成功] 工作空间产物：/long/build/path', 'ok', False),
+        ('[启动] 车辆控制器 ...', 'info', False),
+        ('[检查] 华测惯导输出：等待 /ins（最多 30 秒）...', 'info', False),
+        ('Starting >>> wuta_msgs', 'info', False),
+        ('Finished <<< wuta_msgs [1.2s]', 'info', False),
+        ('Summary: 25 packages finished', 'info', False),
+        ('已打开实时日志窗口：车辆状态 / 传感器参数', 'ok', False),
+        ('没有图形桌面，保留彩色终端；可用 l 查看详细日志。', 'warn', False),
+        ('预检查通过', 'ok', True),
+        ('启动任务已提交；失败后保留管理菜单，不自动重启控制器。', 'ok', True),
+        ('[成功] 全栈启动检查完成', 'ok', True),
+        ('[状态 10:20:30] 阶段：RACE 比赛中', 'info', True),
+        ('[状态 10:20:31] 圈数：2', 'info', True),
+        ('[状态 10:20:32] 下一步：等待地图闭合', 'info', True),
+        ('[状态 10:20:33] GO：累计收到 2 次', 'info', True),
+        ('[失败] 惯导输出：超时', 'error', True),
+        ('--- 华测惯导驱动与数据桥：最近日志 (/tmp/ins.log) ---', 'info', True),
+        ('Traceback (most recent call last):', 'error', True),
+        ('  File "driver.py", line 5, in receive', 'info', True),
+        ('    raise RuntimeError("串口断开")', 'info', True),
+        ('RuntimeError: 串口断开', 'info', True),
+        ('[启动] 华测惯导驱动与数据桥 ...', 'info', False),
+        ('普通构建信息', 'info', False),
+        ('配置快照未完整保存：磁盘只读', 'warn', True),
+        ('[成功] 华测惯导输出：已收到消息', 'ok', False),
+        ('/bin/bash: missing_command: command not found', 'info', True),
+        ('Permission denied: /dev/ttyUSB0', 'info', True),
+        ('[管理] 本次运行结束：用户停止，退出码=0', 'info', True),
+        ('本启动包登记的运行进程已清理。', 'ok', True),
+        ('s 启动/重试 | c 并行检查 | p 权限处理', 'title', False),
+    ]
+    for i, (text, level, _) in enumerate(samples):
+        module.append_manager_event(log, f'[10:20:30] {text}\n', level, 1234567890 + i)
+    full_path = log.with_name('manager.events.jsonl')
+    essential_path = log.with_name('manager.radio.events.jsonl')
+    full = [json.loads(line) for line in full_path.read_text(encoding='utf-8').splitlines()]
+    essential = [json.loads(line) for line in essential_path.read_text(encoding='utf-8').splitlines()]
+    assert len(full) == len(samples)
+    expected = [(f'[10:20:30] {text}\n', str(1234567890 + i))
+                for i, (text, _, keep) in enumerate(samples) if keep]
+    assert [(e['text'], e['source_stamp_ns']) for e in essential] == expected
+    assert stream_id(full_path) != stream_id(essential_path)
+    # Only the essential source is queued: old full journals must not drain over radio.
+    c = settings(config, tmp_path)
+    forward = CliForwarder(c, Outbox(c))
+    forward.tick(0)
+    assert list(forward.files.values()) == [essential_path]
+    assert forward.backlog == essential_path.stat().st_size
+    published, acks = [], []
+    receiver = CliReceiver(tmp_path / 'pc', published.append, acks.append)
+    for step in range(2000):
+        if forward.pending is not None:
+            receiver.accept(unpack_message(pack_message(forward.pending['message'])))
+            forward.acknowledge(acks.pop())
+        forward.tick(step + 1)
+        if forward.backlog == 0:
+            break
+    assert [(e['text'], str(e['t'])) for e in published] == expected
+    assert forward.backlog == 0
+
+
+def test_essential_failure_context_is_isolated_between_sessions(tmp_path):
+    module = source_module('log_context')
+    first = tmp_path / 'one/manager.log'
+    second = tmp_path / 'two/manager.log'
+    first.parent.mkdir(); second.parent.mkdir()
+    module.append_manager_event(first, 'Traceback:\n', 'error', 1)
+    module.append_manager_event(second, 'Finished <<< normal_build\n', 'info', 2)
+    module.append_manager_event(first, '  完整堆栈正文 αβ\n', 'info', 3)
+    assert not second.with_name('manager.radio.events.jsonl').exists()
+    records = [json.loads(line) for line in first.with_name('manager.radio.events.jsonl')
+               .read_text(encoding='utf-8').splitlines()]
+    assert [e['text'] for e in records] == ['Traceback:\n', '  完整堆栈正文 αβ\n']
