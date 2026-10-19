@@ -62,16 +62,18 @@ def test_bounded_scene_and_tf_failure_clear(config):
     cache = MarkerCache(100)
     cache.apply([marker(id=i) for i in range(70)], 1)
     lookup = lambda frame, stamp: ((0, 0, 0), (0, 0, 0, 1))
-    result = scene_snapshot("map", cache, lookup, config, 1)
+    diagnostics = {}
+    result = scene_snapshot("map", cache, lookup, config, 1, diagnostics=diagnostics)
     assert len(pack_message(result)) <= config["geometry"]["snapshot_bytes"]
-    assert result["s"]["omitted_markers"] > 0
-    assert result["s"]["source_points"] == 7000
+    assert "s" not in result and "f" not in result and "q" not in result
+    assert diagnostics["omitted_markers"] > 0
+    assert diagnostics["source_points"] == 7000
 
     def missing(*args):
         raise LookupError("no TF")
 
-    result = scene_snapshot("map", cache, missing, config, 1)
-    assert result["o"] == [] and result["s"]["tf_or_geometry_drops"] > 0
+    result = scene_snapshot("map", cache, missing, config, 1, diagnostics=diagnostics)
+    assert result["o"] == [] and diagnostics["tf_or_geometry_drops"] > 0
 
 
 def test_no_false_line_connection_across_nan_and_unsupported_mesh():

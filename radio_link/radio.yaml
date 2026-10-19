@@ -21,10 +21,24 @@ foxglove:
   port: 8765
   control_port: 8766
   stale_seconds: 10.0
+  # Local rendering only. These sizes, widths and colors never cross the radio.
+  styles:
+    cone_size: [0.25, 0.25, 0.4]
+    point_size: 0.08
+    line_width: 0.08
+    arrow_size: [1.8, 0.15, 0.35]
+    arrow_shaft: 0.10
+    arrow_head: 0.22
+    colors:
+      default: [255, 255, 255, 255]
+      vehicle: [40, 230, 180, 255]
+      centerline: [0, 255, 0, 255]
+      path: [0, 210, 255, 255]
+      trajectory: [255, 215, 0, 255]
+      control: [255, 80, 210, 255]
 geometry:
   quantization_m: 0.05
   cache_markers: 256
-  text_chars: 64
   snapshot_bytes: 1200  # compressed application bytes, before packet framing.
 layers:
   vehicle: {interval: 1.0, weight: 4}

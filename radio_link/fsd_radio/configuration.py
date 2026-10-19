@@ -111,7 +111,7 @@ def validate(config):
         raise ValueError("response_timeout must be >=2 seconds for the 2.4kbps profile")
     positive(config["geometry"]["quantization_m"], "quantization_m")
     positive(config["foxglove"]["stale_seconds"], "stale_seconds")
-    for name in ("cache_markers", "text_chars", "snapshot_bytes"):
+    for name in ("cache_markers", "snapshot_bytes"):
         if (
             not isinstance(config["geometry"][name], int)
             or config["geometry"][name] < 1
@@ -121,6 +121,24 @@ def validate(config):
         raise ValueError("snapshot_bytes exceeds max_message_bytes")
     if config["geometry"]["snapshot_bytes"] > link["fragment_bytes"] * 64:
         raise ValueError("snapshot_bytes exceeds 64 fragment capacity")
+    styles = config["foxglove"].get("styles")
+    if not isinstance(styles, dict):
+        raise ValueError(
+            "foxglove.styles is required; upgrade radio.yaml with schema 2"
+        )
+    for key in ("line_width", "point_size", "arrow_shaft", "arrow_head"):
+        positive(styles[key], f"styles.{key}")
+    for key in ("cone_size", "arrow_size"):
+        if len(styles[key]) != 3:
+            raise ValueError(f"styles.{key} must have three sizes")
+        for value in styles[key]:
+            positive(value, f"styles.{key}")
+    for key in ("default", "vehicle", "centerline", "path", "trajectory", "control"):
+        rgba = styles["colors"][key]
+        if len(rgba) != 4 or any(
+            not isinstance(v, int) or not 0 <= v <= 255 for v in rgba
+        ):
+            raise ValueError(f"styles.colors.{key} must be four bytes")
     for key, layer in config["layers"].items():
         positive(layer["interval"], f"{key}.interval")
         positive(layer["weight"], f"{key}.weight")

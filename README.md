@@ -7,6 +7,8 @@ ROS 2 Humble + RViz 的独立工作区，适用于已运行的 WUTA-FSD 算法�
 2026年10月17日新增可选[ E22无线遥测与Foxglove组件](radio_link/README.md)：Linux按既有显示话题量化抽样，Windows从COM3接收并经Foxglove官方SDK显示；双向JSON扩展独立于驾驶话题。无线组件独立安装/启动，原有build.sh/start.sh行为不变，Linux无线串口在`radio_link/radio.yaml`配置，启动参数可覆盖。
 
 
+2026年10月19日无线组件更新至0.2.0，采用schema 2精简二进制协议：仅传输必要几何、车辆状态及时间信息，固定显示样式在接收端本地配置。升级时先更新并重启Windows接收端，再更新Linux发送端；新版接收端兼容旧格式。刷新频率和160 UART字节/秒总预算保持不变；字节数对比、升级说明及尚未完成实机验证的范围见[无线组件说明](radio_link/README.md)与[验证记录](radio_link/VALIDATION.md)。
+
 ## 独立仓库与主项目引用
 
 独立仓库：[starry1N/fsd-visualization-code](https://github.com/starry1N/fsd-visualization-code)（私有，克隆者需访问权限）。范围包含两个ROS包、显示配置与测试，以及可选E22/Foxglove组件；FSD消息包仍由原算法安装空间提供。

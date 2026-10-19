@@ -6,6 +6,8 @@ import threading
 import websockets
 from fsd_radio.foxglove_view import FoxgloveView, entity_from_record
 from fsd_radio.pc_receiver import make_control_server, send_extension
+from fsd_radio.essentials import STRIP, profile_tag
+from fsd_radio.protocol import pack_message, unpack_message
 
 
 def test_all_marker_types_sdk_serialization(config):
@@ -51,27 +53,51 @@ def test_real_sdk_websocket_advertise_subscribe_and_client_publish(config):
                         channels = obj["channels"]
             assert any(ch["schemaName"] == "foxglove.SceneUpdate" for ch in channels)
             state = next(ch for ch in channels if ch["topic"] == "/radio/state")
+            path = next(ch for ch in channels if ch["topic"] == "/radio/scene/path")
             await ws.send(
                 json.dumps(
                     {
                         "op": "subscribe",
-                        "subscriptions": [{"id": 17, "channelId": state["id"]}],
+                        "subscriptions": [
+                            {"id": 17, "channelId": state["id"]},
+                            {"id": 18, "channelId": path["id"]},
+                        ],
                     }
                 )
             )
             await asyncio.sleep(0.05)
             view.accept(
-                {
-                    "k": "vehicle",
-                    "f": "map",
-                    "t": 7,
-                    "q": 0.05,
-                    "p": [1, 2, 0],
-                    "r": [0, 0, 0, 1],
-                    "v": 3.2,
-                }
+                unpack_message(
+                    pack_message(
+                        {
+                            "e": 2,
+                            "k": "vehicle",
+                            "g": profile_tag(config),
+                            "t": 7,
+                            "p": [1, 2, 0],
+                            "r": [0, 0, 0, 1],
+                            "v": 3.2,
+                        }
+                    )
+                )
             )
-            while True:
+            view.accept(
+                unpack_message(
+                    pack_message(
+                        {
+                            "e": 2,
+                            "k": "scene",
+                            "l": "path",
+                            "t": 0,
+                            "a": 0,
+                            "g": profile_tag(config),
+                            "o": [{"h": STRIP, "p": [[0, 0, 0], [20, 0, 0]]}],
+                        }
+                    )
+                )
+            )
+            got_state = got_path = False
+            while not (got_state and got_path):
                 frame = await asyncio.wait_for(ws.recv(), 3)
                 if (
                     isinstance(frame, bytes)
@@ -80,7 +106,14 @@ def test_real_sdk_websocket_advertise_subscribe_and_client_publish(config):
                 ):
                     value = json.loads(frame[13:])
                     assert value["speed_m_s"] == 3.2
-                    break
+                    got_state = True
+                elif (
+                    isinstance(frame, bytes)
+                    and frame[0] == 1
+                    and struct.unpack_from("<I", frame, 1)[0] == 18
+                ):
+                    assert len(frame) > 20
+                    got_path = True
             await ws.send(
                 json.dumps(
                     {

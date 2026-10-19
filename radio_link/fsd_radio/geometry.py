@@ -3,6 +3,19 @@
 from collections import OrderedDict
 import math
 from .protocol import pack_message
+from .essentials import (
+    CONES,
+    STRIP,
+    SEGMENTS,
+    POINTS,
+    BOX,
+    ELLIPSOID,
+    CYLINDER,
+    ARROW,
+    FIXED_COLOR_LAYERS,
+    profile_tag,
+    rgb_code,
+)
 
 IDENTITY = (0.0, 0.0, 0.0, 1.0)
 
@@ -135,7 +148,59 @@ def compact_marker(marker, lookup, step, max_points, text_chars):
     ]
 
 
-def scene_snapshot(name, cache, lookup, config, ros_now_ns, source_age=0.0):
+def essential_marker(name, marker, lookup, step, max_points):
+    if marker["type"] == 9:
+        return None  # Labels and speed text are generated locally.
+    if marker["color"][3] == 0 and not any(c[3] for c in marker["colors"]):
+        return None
+    old = compact_marker(marker, lookup, step, max_points, 0)
+    _, typ, position, rotation, scale, rgba, local_points, colors, _ = old
+
+    def world(point):
+        rotated = rotate(rotation, [v * step for v in point])
+        return [round((p * step + v) / step) for p, v in zip(position, rotated)]
+
+    points = [world(p) for p in local_points]
+    kind = None
+    dimensions = False
+    if typ in (4, 5):
+        if len(points) < 2:
+            return None
+        kind = STRIP if typ == 4 else SEGMENTS
+    elif typ == 0:
+        kind = ARROW
+        if len(points) < 2:
+            points = [position, world([scale[0] / step, 0, 0])]
+        else:
+            points = points[:2]
+            colors = colors[:2]
+    elif typ == 8 or typ == 7 and name not in ("map", "fused"):
+        kind = POINTS
+    elif name in ("map", "fused") and typ in (1, 2, 3, 6, 7):
+        kind = CONES
+        if typ not in (6, 7):
+            points = [position]
+    else:
+        kind = {1: BOX, 2: ELLIPSOID, 3: CYLINDER, 6: BOX}[typ]
+        dimensions = True
+        if typ != 6:
+            points = [position]
+    if not points:
+        return None
+    record = {"h": kind, "p": points}
+    if name not in FIXED_COLOR_LAYERS:
+        codes = [rgb_code(c) for c in colors] if colors else [rgb_code(rgba)]
+        record["c"] = [codes[0]] if all(c == codes[0] for c in codes) else codes
+    if dimensions:
+        record["d"] = [max(0, round(v / step)) for v in scale]
+        if any(abs(a - b) > 1e-4 for a, b in zip(rotation, IDENTITY)):
+            record["r"] = [round(v * 32767) for v in rotation]
+    return record
+
+
+def scene_snapshot(
+    name, cache, lookup, config, ros_now_ns, source_age=0.0, diagnostics=None
+):
     options = config["layers"][name]
     step = config["geometry"]["quantization_m"]
     live = cache.live(ros_now_ns)
@@ -149,51 +214,52 @@ def scene_snapshot(name, cache, lookup, config, ros_now_ns, source_age=0.0):
         "tf_or_geometry_drops": 0,
         "cache_evictions": cache.evicted,
     }
-    for index in sample_indices(len(live), options["markers"]):
+    visible = [marker for marker in live if marker["type"] != 9]
+    for index in sample_indices(len(visible), options["markers"]):
         try:
-            records.append(
-                compact_marker(
-                    live[index],
-                    lookup,
-                    step,
-                    options["points"],
-                    config["geometry"]["text_chars"],
-                )
+            record = essential_marker(
+                name, visible[index], lookup, step, options["points"]
             )
+            if record is not None:
+                records.append(record)
         except (ValueError, LookupError):
             stats["tf_or_geometry_drops"] += 1
     message = {
+        "e": 2,
         "k": "scene",
         "l": name,
-        "f": config["fixed_frame"],
-        "t": cache.source_stamp,
-        "q": step,
+        "g": profile_tag(config),
+        "t": cache.source_stamp // 1_000_000 * 1_000_000,
         "o": records,
-        "s": stats,
         "a": round(source_age, 1),
     }
     while True:
         stats["selected_markers"] = len(records)
         stats["omitted_markers"] = max(0, len(live) - len(records))
-        stats["sent_points"] = sum(len(record[6]) for record in records)
+        stats["sent_points"] = sum(len(record["p"]) for record in records)
         try:
             if (
                 len(pack_message(message, config["link"]["max_message_bytes"]))
                 <= config["geometry"]["snapshot_bytes"]
             ):
+                if diagnostics is not None:
+                    diagnostics.clear()
+                    diagnostics.update(stats)
                 return message
         except ValueError:
             pass
         # Thin all lines/point sets before discarding whole objects.
         changed = False
         for record in records:
-            if len(record[6]) > 4:
+            if len(record["p"]) > 4:
                 indices = sample_indices(
-                    len(record[6]), max(2, len(record[6]) // 2), record[1] == 5
+                    len(record["p"]),
+                    max(2, len(record["p"]) // 2),
+                    record["h"] == SEGMENTS,
                 )
-                record[6] = [record[6][i] for i in indices]
-                if record[7]:
-                    record[7] = [record[7][i] for i in indices]
+                record["p"] = [record["p"][i] for i in indices]
+                if len(record.get("c", [])) > 1:
+                    record["c"] = [record["c"][i] for i in indices]
                 changed = True
         if not changed:
             if not records:

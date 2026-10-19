@@ -9,6 +9,7 @@ import threading
 import time
 from .protocol import SLAVE
 from .worker import RadioWorker
+from .essentials import profile_tag, STRIP
 
 LOG = logging.getLogger(__name__)
 
@@ -97,36 +98,23 @@ def run_pc(config, port, demo=False, duration=None):
                 x = math_sine(now - began)
                 view.accept(
                     {
+                        "e": 2,
                         "k": "vehicle",
-                        "f": config["fixed_frame"],
+                        "g": profile_tag(config),
                         "t": time.time_ns(),
-                        "q": 0.05,
-                        "p": [round(x / 0.05), 0, 0],
+                        "p": [round(x / config["geometry"]["quantization_m"]), 0, 0],
                         "r": [0, 0, 0, 1],
                         "v": 2.5,
                     }
                 )
                 view.accept(
                     {
+                        "e": 2,
                         "k": "scene",
                         "l": "path",
-                        "f": config["fixed_frame"],
+                        "g": profile_tag(config),
                         "t": time.time_ns(),
-                        "q": 0.05,
-                        "o": [
-                            [
-                                "demo:0",
-                                4,
-                                [0, 0, 0],
-                                [0, 0, 0, 1],
-                                [0.1, 0, 0],
-                                [0, 210, 255, 255],
-                                [[0, 0, 0], [80, 20, 0], [160, 0, 0]],
-                                [],
-                                "",
-                            ]
-                        ],
-                        "s": {"demo": True},
+                        "o": [{"h": STRIP, "p": [[0, 0, 0], [80, 20, 0], [160, 0, 0]]}],
                     }
                 )
                 last_demo = now

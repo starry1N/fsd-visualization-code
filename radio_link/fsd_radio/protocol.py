@@ -104,6 +104,10 @@ class Framer:
 
 
 def pack_message(message, limit=4096):
+    if message.get("e") == 2:
+        from .essentials import encode
+
+        return encode(message, limit)
     raw = json.dumps(
         message, ensure_ascii=True, allow_nan=False, separators=(",", ":")
     ).encode()
@@ -116,6 +120,10 @@ def pack_message(message, limit=4096):
 def unpack_message(data, limit=4096):
     if not data or len(data) > limit + 1:
         raise ValueError("message length")
+    if data[:1] in (b"S", b"V", b"z"):
+        from .essentials import decode
+
+        return decode(data, limit)
     if data[:1] == b"Z":
         decoder = zlib.decompressobj()
         try:

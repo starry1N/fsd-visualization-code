@@ -15,6 +15,7 @@ from .geometry import (
 )
 from .protocol import MASTER
 from .worker import RadioWorker
+from .essentials import profile_tag
 
 LOG = logging.getLogger(__name__)
 
@@ -62,6 +63,7 @@ def run_linux(config, port, use_sim_time=False):
             self.input_received = {}
             self.last_ros_now = None
             self.snapshots_last = {}
+            self.sampling_stats = {}
             for name, topic in config["resolved_layers"].items():
                 if topic:
                     self.subs.append(
@@ -157,7 +159,7 @@ def run_linux(config, port, use_sim_time=False):
                             "colors": [rgba(marker.colors[i]) for i in indices]
                             if len(marker.colors) == len(marker.points)
                             else [],
-                            "text": marker.text[: config["geometry"]["text_chars"]],
+                            "text": "",
                         }
                     )
                 except ValueError as exc:
@@ -207,6 +209,7 @@ def run_linux(config, port, use_sim_time=False):
                         config,
                         now_ns,
                         wall - self.input_received[name],
+                        self.sampling_stats.setdefault(name, {}),
                     )
                     worker.outbox.update(name, snapshot)
                     self.snapshots_last[name] = wall
@@ -229,10 +232,10 @@ def run_linux(config, port, use_sim_time=False):
                     worker.outbox.update(
                         "vehicle",
                         {
+                            "e": 2,
                             "k": "vehicle",
-                            "f": config["fixed_frame"],
-                            "t": stamp,
-                            "q": step,
+                            "g": profile_tag(config),
+                            "t": stamp // 1_000_000 * 1_000_000,
                             "p": [
                                 round(v / step)
                                 for v in transform_point(transform, point)
@@ -276,6 +279,7 @@ def run_linux(config, port, use_sim_time=False):
                     data=json.dumps(
                         {
                             **worker.status(),
+                            "sampling": self.sampling_stats,
                             "unseen_layers": [
                                 name
                                 for name, topic in config["resolved_layers"].items()

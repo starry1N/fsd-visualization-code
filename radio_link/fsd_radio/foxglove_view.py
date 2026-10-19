@@ -10,6 +10,7 @@ from foxglove import messages as m
 from foxglove.channels import SceneUpdateChannel
 from foxglove.websocket import Capability, ServerListener
 from .geometry import multiply, rotate
+from .essentials import expanded_records, profile_tag
 
 TX_TOPIC = "/fsd_radio/extension/tx"
 
@@ -214,6 +215,18 @@ class FoxgloveView:
         if message["k"] == "extension":
             self.log("extension/rx", message["body"])
             return
+        if message.get("e") == 2:
+            if message["g"] != profile_tag(self.config):
+                raise ValueError(
+                    "fixed frame or quantization differs between endpoints"
+                )
+            message = {
+                **message,
+                "f": self.config["fixed_frame"],
+                "q": self.config["geometry"]["quantization_m"],
+            }
+            if message["k"] == "scene":
+                message["o"] = expanded_records(message, self.config)
         key = message.get("l", "vehicle")
         if key not in self.channels:
             raise ValueError("unknown scene layer")
@@ -251,8 +264,8 @@ class FoxgloveView:
                         0,
                         message["p"],
                         message["r"],
-                        [1.8, 0.15, 0.35],
-                        [40, 230, 180, 255],
+                        self.config["foxglove"]["styles"]["arrow_size"],
+                        self.config["foxglove"]["styles"]["colors"]["vehicle"],
                         [],
                         [],
                         "",
@@ -302,6 +315,8 @@ class FoxgloveView:
                 > self.config["foxglove"]["stale_seconds"],
                 "source_ros_stamp_ns": message["t"],
                 "sampling": message.get("s", {}),
+                "schema": message.get("e", 1),
+                "display_objects": len(message.get("o", [])),
             }
         self.log("layers", ages)
         if "vehicle" not in self.snapshots:
