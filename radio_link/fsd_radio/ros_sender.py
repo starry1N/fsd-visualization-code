@@ -17,6 +17,7 @@ from .geometry import (
 from .protocol import MASTER
 from .worker import RadioWorker
 from .essentials import profile_tag
+from .cli_telemetry import CliForwarder
 
 LOG = logging.getLogger(__name__)
 
@@ -39,6 +40,11 @@ def run_linux(config, port, use_sim_time=False):
         incoming.put_nowait(message)
 
     worker = RadioWorker(MASTER, port, config, receive)
+    cli_forwarder = (
+        CliForwarder(config, worker.outbox)
+        if config.get("cli", {}).get("enabled")
+        else None
+    )
 
     class Sender(Node):
         def __init__(self):
@@ -206,6 +212,8 @@ def run_linux(config, port, use_sim_time=False):
                 self.speed_stamp = 0
             self.last_ros_now = now_ns
             wall = time.monotonic()
+            if cli_forwarder:
+                cli_forwarder.tick(wall)
             for name in self.seen:
                 # Snapshot preparation is bounded and stays on the ROS thread.
                 if wall - self.snapshots_last.get(name, -1e9) < min(
@@ -270,6 +278,12 @@ def run_linux(config, port, use_sim_time=False):
                     LOG.debug("pose not available: %s", exc)
             while not incoming.empty():
                 message = incoming.get_nowait()
+                if message["k"] == "cli_ack" and cli_forwarder:
+                    try:
+                        cli_forwarder.acknowledge(message)
+                    except (OSError, ValueError) as exc:
+                        LOG.warning("CLI disk ACK rejected: %s", exc)
+                    continue
                 if message["k"] != "extension":
                     LOG.warning("ignored non-extension uplink")
                     continue
@@ -306,6 +320,9 @@ def run_linux(config, port, use_sim_time=False):
                         {
                             **worker.status(),
                             "sampling": self.sampling_stats,
+                            "cli": cli_forwarder.status()
+                            if cli_forwarder
+                            else {"enabled": False},
                             "unseen_layers": [
                                 name
                                 for name, topic in config["resolved_layers"].items()

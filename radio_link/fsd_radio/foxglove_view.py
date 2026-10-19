@@ -1,5 +1,6 @@
 """Official SDK typed SceneUpdate channels; the PC does not require ROS."""
 
+from collections import deque
 import json
 import math
 import queue
@@ -7,10 +8,11 @@ import threading
 import time
 import foxglove
 from foxglove import messages as m
-from foxglove.channels import SceneUpdateChannel
+from foxglove.channels import SceneUpdateChannel, LogChannel
 from foxglove.websocket import Capability, ServerListener
 from .geometry import multiply, rotate
 from .essentials import expanded_records, profile_tag, source_stamp
+from .cli_telemetry import expand_status
 
 TX_TOPIC = "/fsd_radio/extension/tx"
 
@@ -193,8 +195,17 @@ class FoxgloveView:
                 "layers",
                 "extension/rx",
                 "extension/status",
+                "cli/sensors",
+                "cli/vehicle",
+                "cli/transfer",
+                "cli/health",
             )
         }
+        self.cli_log_channel = LogChannel("/radio/cli/log", context=self.context)
+        self.cli_log_cache = deque()
+        self.cli_log_cache_bytes = 0
+        self.cli_status_received = None
+        self.cli_collector_stale = True
         self.snapshots = {}
         self.pending = []
         self.replay = {}
@@ -289,6 +300,63 @@ class FoxgloveView:
 
     def accept(self, message):
         received = time.monotonic()
+        if message["k"] == "cli_event":
+            stamp = source_stamp(message["t"])
+            if stamp == 0:
+                raise ValueError("CLI event has unknown source time")
+            level = {
+                "debug": m.LogLevel.Debug,
+                "warn": m.LogLevel.Warning,
+                "error": m.LogLevel.Error,
+                "fatal": m.LogLevel.Fatal,
+            }.get(message["level"], m.LogLevel.Info)
+            value = m.Log(
+                timestamp=timestamp(stamp),
+                level=level,
+                message=message["text"],
+                name="CLI:" + message["stream"],
+                file=str(message["offset"]),
+            )
+            # CLI event history must never be dropped by the geometry late-data policy.
+            self.cli_log_channel.log(value, log_time=stamp)
+            size = len(message["text"].encode("utf-8"))
+            self.cli_log_cache.append((value, stamp, size))
+            self.cli_log_cache_bytes += size
+            while self.cli_log_cache and (
+                len(self.cli_log_cache) > 2000
+                or self.cli_log_cache_bytes > 4 * 1024 * 1024
+            ):
+                self.cli_log_cache_bytes -= self.cli_log_cache.popleft()[2]
+            return
+        if message["k"] == "cli_status":
+            value = expand_status(message)
+            stamp = source_stamp(message["t"])
+            self.cli_status_received = received
+            self.cli_collector_stale = value["collector_stale"]
+            self.log(
+                "cli/sensors", {k: v for k, v in value.items() if k != "vehicle"}, stamp
+            )
+            self.log(
+                "cli/vehicle",
+                {
+                    "source_stamp_ns": str(stamp),
+                    "clock_domain": "unix",
+                    "rows": value["vehicle"],
+                },
+                stamp,
+            )
+            self.log(
+                "cli/transfer",
+                {
+                    "source_stamp_ns": str(stamp),
+                    "backlog_bytes": value["log_backlog_bytes"],
+                    "collector_error": value["collector_error"],
+                    "sender_error": value["sender_error"],
+                    "source_warning": value["source_warning"],
+                },
+                stamp,
+            )
+            return
         if message["k"] == "extension":
             payload = {
                 **message["body"],
@@ -437,10 +505,29 @@ class FoxgloveView:
         now = time.monotonic()
         self.flush(now)
         while not self.listener.subscriptions.empty():
-            cached = self.replay.get(self.listener.subscriptions.get_nowait())
+            topic = self.listener.subscriptions.get_nowait()
+            if topic == "/radio/cli/log":
+                for value, stamp, _ in self.cli_log_cache:
+                    self.cli_log_channel.log(value, log_time=stamp)
+                continue
+            cached = self.replay.get(topic)
             if cached:
                 channel, value, stamp = cached
                 channel.log(value, log_time=stamp)
+        cli_age = (
+            None if self.cli_status_received is None else now - self.cli_status_received
+        )
+        self.log(
+            "cli/health",
+            {
+                "received": cli_age is not None,
+                "receive_age_s": cli_age,
+                "stale": self.cli_collector_stale
+                or cli_age is None
+                or cli_age
+                > max(20, self.config.get("cli", {}).get("status_interval", 10) * 2),
+            },
+        )
         ages = {key: {"received": False, "stale": True} for key in self.channels}
         with self.lock:
             snapshots = list(self.snapshots.items())

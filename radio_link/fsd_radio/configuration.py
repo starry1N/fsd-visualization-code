@@ -69,6 +69,32 @@ def load_config(filename, mode=None):
         "velocity_in_topics_yaml": topics["topics"]["velocity"],
         "effective_marker_topics": config["resolved_layers"],
     }
+    cli_defaults = {
+        "enabled": True,
+        "project_root": "../..",
+        "state_file": "../../.runtime/fsd_manager/state.json",
+        "telemetry_file": "../../.runtime/fsd_manager/telemetry.json",
+        "checkpoint_file": "../../.runtime/fsd_radio/cli_tx.json",
+        "pc_storage": "~/.fsd_radio/cli_received",
+        "chunk_bytes": 512,
+        "scan_seconds": 5.0,
+        "retry_seconds": 30.0,
+        "status_interval": 10.0,
+    }
+    config["cli"] = {**cli_defaults, **config.get("cli", {})}
+    for key in (
+        "project_root",
+        "state_file",
+        "telemetry_file",
+        "checkpoint_file",
+        "pc_storage",
+    ):
+        candidate = Path(config["cli"][key]).expanduser()
+        config["cli"][key] = str(
+            (path.parent / candidate).resolve()
+            if not candidate.is_absolute()
+            else candidate.resolve()
+        )
     validate(config)
     return config
 
@@ -97,9 +123,9 @@ def validate(config):
         )
     if (
         not isinstance(link["fragment_bytes"], int)
-        or not 16 <= link["fragment_bytes"] <= 96
+        or not 16 <= link["fragment_bytes"] <= 144
     ):
-        raise ValueError("fragment_bytes must be an integer from 16 to 96")
+        raise ValueError("fragment_bytes must be an integer from 16 to 144")
     if not isinstance(link["retries"], int) or not 0 <= link["retries"] <= 5:
         raise ValueError("retries must be 0..5")
     for name in ("max_message_bytes", "extension_queue"):
@@ -149,6 +175,14 @@ def validate(config):
             not isinstance(v, int) or not 0 <= v <= 255 for v in rgba
         ):
             raise ValueError(f"styles.colors.{key} must be four bytes")
+    cli = config.get("cli", {})
+    for key in ("scan_seconds", "retry_seconds", "status_interval"):
+        if key in cli:
+            positive(cli[key], f"cli.{key}")
+    if "chunk_bytes" in cli and (
+        not isinstance(cli["chunk_bytes"], int) or not 64 <= cli["chunk_bytes"] <= 2048
+    ):
+        raise ValueError("cli.chunk_bytes must be 64..2048")
     for key, layer in config["layers"].items():
         positive(layer["interval"], f"{key}.interval")
         positive(layer["weight"], f"{key}.weight")

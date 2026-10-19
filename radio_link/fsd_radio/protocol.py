@@ -11,7 +11,7 @@ import zlib
 
 HEADER = struct.Struct(">BBIHIHHBB")
 VERSION, MASTER, SLAVE = 1, 1, 2
-MAX_PAYLOAD, MAX_FRAGMENTS, MAX_WIRE = 96, 64, 162
+MAX_PAYLOAD, MAX_FRAGMENTS, MAX_WIRE = 144, 64, 226
 
 
 @dataclass(frozen=True)
@@ -104,12 +104,16 @@ class Framer:
 
 
 def pack_message(message, limit=4096):
+    if message.get("k") in ("cli_log", "cli_ack"):
+        from .cli_telemetry import encode_payload
+
+        return encode_payload(message, limit)
     if message.get("e") in (2, 3):
         from .essentials import encode
 
         return encode(message, limit)
     raw = json.dumps(
-        message, ensure_ascii=True, allow_nan=False, separators=(",", ":")
+        message, ensure_ascii=False, allow_nan=False, separators=(",", ":")
     ).encode()
     if len(raw) > limit:
         raise ValueError(f"message JSON exceeds {limit} bytes")
@@ -120,6 +124,10 @@ def pack_message(message, limit=4096):
 def unpack_message(data, limit=4096):
     if not data or len(data) > limit + 1:
         raise ValueError("message length")
+    if data[:1] in (b"L", b"A", b"b"):
+        from .cli_telemetry import decode_payload
+
+        return decode_payload(data, limit)
     if data[:1] in (b"S", b"V", b"z"):
         from .essentials import decode
 
@@ -151,6 +159,7 @@ def unpack_message(data, limit=4096):
         "scene",
         "vehicle",
         "extension",
+        "cli_status",
     ):
         raise ValueError("message kind")
     if message["k"] == "extension" and not isinstance(message.get("body"), dict):

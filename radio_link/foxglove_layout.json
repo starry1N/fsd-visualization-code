@@ -108,24 +108,76 @@
         }
       ],
       "foxglovePanelTitle": "车速曲线 (m/s)"
+    },
+    "RosOut!cliComplete": {
+      "topicToRender": "/radio/cli/log",
+      "minLogLevel": 0,
+      "showLevel": true,
+      "showTime": true,
+      "showName": true,
+      "showDate": true,
+      "foxglovePanelTitle": "CLI 实时日志（完整文字）"
+    },
+    "RawMessages!cliSensors": {
+      "topicPath": "/radio/cli/sensors",
+      "defaultExpanded": true,
+      "foxglovePanelTitle": "CLI 传感器状态"
+    },
+    "RawMessages!cliVehicle": {
+      "topicPath": "/radio/cli/vehicle",
+      "defaultExpanded": true,
+      "foxglovePanelTitle": "CLI 车辆与任务状态"
+    },
+    "RawMessages!cliTransfer": {
+      "topicPath": "/radio/cli/transfer",
+      "defaultExpanded": true,
+      "foxglovePanelTitle": "日志积压与采集器状态"
+    },
+    "Tab!radioMonitor": {
+      "activeTabIdx": 0,
+      "tabs": [
+        {
+          "title": "车辆与场景",
+          "layout": {
+            "direction": "row",
+            "splitPercentage": 60,
+            "first": "3D!2tqi6tm",
+            "second": {
+              "direction": "column",
+              "splitPercentage": 45,
+              "first": {
+                "direction": "row",
+                "splitPercentage": 45,
+                "first": "Gauge!1hib8b8",
+                "second": "RawMessages!3qsca5q"
+              },
+              "second": "Plot!3jxfb5t"
+            }
+          }
+        },
+        {
+          "title": "CLI 日志与传感器",
+          "layout": {
+            "direction": "row",
+            "splitPercentage": 60,
+            "first": {
+              "direction": "column",
+              "splitPercentage": 80,
+              "first": "RosOut!cliComplete",
+              "second": "RawMessages!cliTransfer"
+            },
+            "second": {
+              "direction": "column",
+              "splitPercentage": 60,
+              "first": "RawMessages!cliSensors",
+              "second": "RawMessages!cliVehicle"
+            }
+          }
+        }
+      ]
     }
   },
-  "layout": {
-    "direction": "row",
-    "splitPercentage": 60,
-    "first": "3D!2tqi6tm",
-    "second": {
-      "direction": "column",
-      "splitPercentage": 45,
-      "first": {
-        "direction": "row",
-        "splitPercentage": 45,
-        "first": "Gauge!1hib8b8",
-        "second": "RawMessages!3qsca5q"
-      },
-      "second": "Plot!3jxfb5t"
-    }
-  },
+  "layout": "Tab!radioMonitor",
   "globalVariables": {},
   "playbackConfig": {
     "speed": 1

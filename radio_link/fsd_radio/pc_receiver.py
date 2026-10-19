@@ -9,6 +9,7 @@ import threading
 import time
 from .protocol import SLAVE
 from .worker import RadioWorker
+from .cli_telemetry import CliReceiver
 from .essentials import profile_tag, STRIP
 
 LOG = logging.getLogger(__name__)
@@ -69,6 +70,17 @@ def run_pc(config, port, demo=False, duration=None):
         worker.outbox.extension(body)
 
     view = FoxgloveView(config, enqueue)
+    cli_receiver = (
+        CliReceiver(
+            config["cli"]["pc_storage"],
+            view.accept,
+            lambda msg: worker.outbox.update_aux(
+                "cli_ack", msg, one_shot=True, weight=100
+            ),
+        )
+        if config.get("cli", {}).get("enabled") and not demo
+        else None
+    )
     control = None
     try:
         control = make_control_server(config["foxglove"]["control_port"], enqueue)
@@ -128,17 +140,31 @@ def run_pc(config, port, demo=False, duration=None):
             while not incoming.empty():
                 message = incoming.get_nowait()
                 try:
-                    view.accept(message)
+                    if message["k"] == "cli_log" and cli_receiver:
+                        cli_receiver.accept(message)
+                    else:
+                        view.accept(message)
                     if message["k"] == "extension":
                         LOG.info(
                             "extension RX: %s",
                             json.dumps(message["body"], ensure_ascii=False),
                         )
-                except (ValueError, TypeError, KeyError, IndexError) as exc:
+                except (OSError, ValueError, TypeError, KeyError, IndexError) as exc:
+                    if cli_receiver and message["k"] == "cli_log":
+                        cli_receiver.error = str(exc)
                     LOG.warning("invalid received display message: %s", exc)
             if now - last_refresh >= 1:
                 view.refresh()
-                view.log("link", {"demo": demo, **worker.status()})
+                view.log(
+                    "link",
+                    {
+                        "demo": demo,
+                        **worker.status(),
+                        "cli": cli_receiver.status()
+                        if cli_receiver
+                        else {"enabled": False},
+                    },
+                )
                 last_refresh = now
             time.sleep(0.02)
     except KeyboardInterrupt:

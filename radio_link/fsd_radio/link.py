@@ -39,18 +39,39 @@ class Outbox:
         self.lock = threading.RLock()
         self.latest, self.active, self.last = {}, {}, {}
         self.extensions = deque()
+        self.aux = {}
         self.counter = 0
         self.sent = 0
 
     def update(self, key, message):
         # Factories are evaluated on the ROS thread, never inside radio I/O.
         packed = pack_message(message, self.config["link"]["max_message_bytes"])
-        if key not in self.config["layers"]:
+        if key not in self.config["layers"] and key not in self.aux:
             raise ValueError("unknown telemetry layer")
         if len(packed) > self.config["link"]["fragment_bytes"] * MAX_FRAGMENTS:
             raise ValueError("message exceeds fragment count limit")
         with self.lock:
             self.latest[key] = packed
+
+    def update_aux(self, key, message, interval=0.1, weight=1, one_shot=False):
+        if key not in ("cli_log", "cli_ack", "cli_status"):
+            raise ValueError("unknown auxiliary telemetry")
+        with self.lock:
+            self.aux[key] = {
+                "interval": interval,
+                "weight": weight,
+                "one_shot": one_shot,
+            }
+            self.update(key, message)
+
+    def aux_pending(self, key):
+        with self.lock:
+            return key in self.latest or key in self.active
+
+    def remove_aux(self, key):
+        with self.lock:
+            self.latest.pop(key, None)
+            self.active.pop(key, None)
 
     def extension(self, body, source_time_ns=None, clock_domain="unix"):
         if not isinstance(body, dict):
@@ -91,14 +112,18 @@ class Outbox:
         with self.lock:
             candidates = []
             for key in self.latest:
-                layer = self.config["layers"][key]
+                layer = self.aux.get(key) or self.config["layers"][key]
                 if (
                     key in self.active
                     or now - self.last.get(key, -1e9) >= layer["interval"]
                 ):
                     candidates.append(key)
             # Every fifth fragment can be extension traffic, never an unbounded priority flood.
-            if self.extensions and (not candidates or self.sent % 5 == 0):
+            if "cli_ack" in candidates:
+                key = "cli_ack"
+            elif "cli_log" in candidates and self.sent % 3 != 2:
+                key = "cli_log"
+            elif self.extensions and (not candidates or self.sent % 5 == 0):
                 key = "_extension"
             elif candidates:
                 # Weighted least-recently-served scheduling also interleaves large snapshots.
@@ -106,7 +131,7 @@ class Outbox:
                     candidates,
                     key=lambda k: (
                         (now - self.last.get(k, now - 60))
-                        * self.config["layers"][k]["weight"]
+                        * (self.aux.get(k) or self.config["layers"][k])["weight"]
                     ),
                 )
             else:
@@ -140,6 +165,9 @@ class Outbox:
                 self.active.pop(job.key, None)
                 if job.key == "_extension":
                     self.extensions.popleft()
+                elif success and self.aux.get(job.key, {}).get("one_shot"):
+                    if self.latest.get(job.key) == b"".join(job.pieces):
+                        self.latest.pop(job.key, None)
 
 
 class Endpoint:

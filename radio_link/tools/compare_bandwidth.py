@@ -1,5 +1,6 @@
 """Reproducible same-scene comparison, including fragmentation and empty ACKs."""
 
+import argparse
 import json
 import math
 from pathlib import Path
@@ -162,5 +163,10 @@ def measure(config):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--fragment-bytes", type=int, choices=range(16,145))
+    args = parser.parse_args()
     config = load_config(Path(__file__).resolve().parents[1] / "radio.yaml")
+    if args.fragment_bytes is not None:
+        config["link"]["fragment_bytes"] = args.fragment_bytes
     print(json.dumps(measure(config), indent=2))
