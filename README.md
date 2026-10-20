@@ -281,3 +281,5 @@ FSD_SETUP=/home/wuta/WUTA2026_FINAL/WUTA-FSD/ros2_ws/install/setup.bash bash sta
 无线0.6.1修复CLI重启后的Foxglove话题丢失：切换会话后重新公告全部通道。Windows接收端更新并重启一次，后续CLI运行切换无需手动重连；无线协议和话题名不变。
 
 无线0.6.2当前策略：完整转发CLI当次运行的manager.events.jsonl，不再筛选必要事件；Foxglove日志标题改为“本次启动完整日志”。历史运行不补传，源时间、持久化确认和双向扩展保留。部署见radio_link/README.md顶部。
+
+2026-10-20：默认RViz启用最终规划路径，无线native转发/planning/final_waypoints_viz，bridge转发/fsd_visualization/planned_path，在Foxglove的/radio/scene/path显示。路径目标间隔1秒、权重3，完整调度与抽样范围见radio_link/README.md。

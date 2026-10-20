@@ -12,8 +12,8 @@ def test_topics_are_resolved_by_existing_renderer(config):
     assert "/rslidar_points" not in config["resolved_layers"].values()
     bridge = load_config(Path(__file__).resolve().parents[1] / "radio.yaml", "bridge")
     assert bridge["resolved_layers"]["fused"] == "/fsd_visualization/fused_cones"
-    # The supplied RViz template disables this layer; radio follows that choice.
-    assert bridge["resolved_layers"]["path"] == ""
+    assert config["resolved_layers"]["path"] == "/planning/final_waypoints_viz"
+    assert bridge["resolved_layers"]["path"] == "/fsd_visualization/planned_path"
 
 
 @pytest.mark.parametrize(
