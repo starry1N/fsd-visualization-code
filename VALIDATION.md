@@ -101,3 +101,5 @@ bash check-gui.sh --mode bridge
 原生Indicator配置字段依据已安装SDK布局类型，phase取既有Manager心跳；PC离线/过期时覆盖显示为离线，保留原始phase及源时间。仅人工阅读，按要求不运行测试、WSL、构建或实车指令。
 
 2026-10-20布局整理：人工核对CLI日志页的状态/操作与dashboard.rows表格分组，参数页只保留编辑/保存/重新读取；未更改Python、无线或业务接口，按要求未运行自动化测试或实车操作。
+
+布局修订：移除CLI页的Table!sensorParams引用，RawMessages!cliSensors由原始诊断页移入传感器概览，专用传感器状态/表格只在该页出现。仅修改布局和文档，未运行测试、接收程序或实车操作。

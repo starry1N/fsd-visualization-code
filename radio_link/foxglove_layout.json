@@ -156,7 +156,7 @@
           }
         },
         {
-          "title": "CLI 日志与传感器",
+          "title": "CLI 日志与控制",
           "layout": {
             "first": {
               "first": "RosOut!cliComplete",
@@ -170,37 +170,32 @@
               "direction": "column"
             },
             "second": {
-              "first": {
+              "first": "Indicator!cliState",
+              "direction": "column",
+              "second": {
                 "first": {
-                  "first": "Indicator!cliState",
+                  "first": "Publish!cli_check",
                   "second": {
-                    "first": "Publish!cli_check",
+                    "first": "Publish!cli_start",
                     "second": {
-                      "first": "Publish!cli_start",
-                      "second": {
-                        "first": "Publish!cli_stop",
-                        "second": "Publish!cli_status",
-                        "splitPercentage": 50.0,
-                        "direction": "row"
-                      },
-                      "splitPercentage": 33.33,
+                      "first": "Publish!cli_stop",
+                      "second": "Publish!cli_status",
+                      "splitPercentage": 50.0,
                       "direction": "row"
                     },
-                    "splitPercentage": 25.0,
+                    "splitPercentage": 33.33,
                     "direction": "row"
                   },
-                  "splitPercentage": 32,
+                  "splitPercentage": 25.0,
                   "direction": "row"
                 },
-                "second": "Table!sensorParams",
-                "splitPercentage": 22,
-                "direction": "column"
+                "direction": "column",
+                "second": "Table!taskState",
+                "splitPercentage": 17
               },
-              "second": "Table!taskState",
-              "splitPercentage": 70,
-              "direction": "column"
+              "splitPercentage": 16
             },
-            "splitPercentage": 50,
+            "splitPercentage": 62,
             "direction": "row"
           }
         },
@@ -244,22 +239,22 @@
                   "second": "Gauge!sensorAge"
                 }
               },
-              "second": "Table!sensorParams"
+              "second": {
+                "first": "Table!sensorParams",
+                "direction": "row",
+                "second": "RawMessages!cliSensors",
+                "splitPercentage": 70
+              }
             }
           }
         },
         {
           "title": "原始诊断",
           "layout": {
+            "first": "RawMessages!cliTransfer",
             "direction": "row",
-            "splitPercentage": 50,
-            "first": "RawMessages!cliSensors",
-            "second": {
-              "direction": "column",
-              "splitPercentage": 50,
-              "first": "RawMessages!cliTransfer",
-              "second": "RawMessages!cliVehicle"
-            }
+            "second": "RawMessages!cliVehicle",
+            "splitPercentage": 50
           }
         },
         {
