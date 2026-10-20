@@ -4,7 +4,26 @@
 
 无线模块按用户确认的**透传、115200 bps 8N1、空速 62.5 kbps**使用。程序不发送模块配置命令，不修改频率、密钥、地址、工作模式或功率。Linux 串口读取 `radio.yaml:serial.linux_port`，启动参数可覆盖；使用前核对实际无线模块设备，当前默认by-id路径见部署说明。
 
-## 当前策略：完整CLI日志（0.6.2）
+## 当前版本与操作入口（0.7.4）
+
+以下为当前源码默认值。文中带明确版本号的历史记录保留原条件，不能据此把160 B/s、旧筛选日志或旧页名当作当前部署配置。
+
+| 项目 | 当前行为 |
+| --- | --- |
+| 串口/空速/分包 | 115200 8N1、62500 bit/s、模块240字节分包；软件不改模块寄存器 |
+| 调度预算 | 双向合计3000 UART B/s，含帧、确认及重试；不是保证有效吞吐 |
+| 目标间隔 | 车辆0.25s，控制目标0.5s，最终路径/融合1s，引导簇2s，地图/中心线/轨迹5s，CLI快照2s；实际受负载影响 |
+| 日志 | 当次manager.events.jsonl全文，原源时间、PC落盘确认与断点；不批量补历史/组件原文件 |
+| 指令 | 独立高优先级队列；请求/分块ACK/执行回复保持优先，批量参数读取在普通队列 |
+| CLI 日志与控制 | 全文日志、CLI状态及操作中、检查/启动/停止/查询、车辆任务表，表下为RSSI原始值 |
+| 传感器概览 | 专用传感器状态、GNSS质量、快照年龄、dashboard.rows表格及原始传感器详情 |
+| 参数控制 | Parameters草稿、保存、重新读取；Linux CLI校验保存，不自动重启或热更新 |
+| RSSI | PC附加解析开启、Linux默认关闭；各软件开关须与对应硬件一致，显示0..255原始值，不假定dBm换算 |
+| 布局 | 本目录foxglove_layout.json；本机副本D:\ebyte\output\FSD_E22_CLI与传感器.json |
+
+通用升级先等待在途操作完成，再从主仓库 `git pull --ff-only`、`git submodule update --init --recursive` 配套更新CLI与无线。PC显示功能变更加载Windows接收端和布局；只换布局无需重启。当前运行源码/交付见宿主docs/DELIVERY.md，参数/操作细节见宿主docs/FOXGLOVE_PARAMETERS.md。
+
+## 完整CLI日志（自0.6.2起，当前保留）
 
 按用户确认，**完整转发CLI当次运行的全部主日志事件**。CLI的radio_run.journal、radio_log_events及run.json的manager_radio_events均指向 `manager.events.jsonl`；不再使用必要信息子集筛选无线内容。正常info、检查/启动进度、普通构建输出、GNSS状态与多行错误堆栈均按源时间及原文传输。下文0.5.x/0.6.0的“只保留必要信息”说明仅为历史记录。
 
@@ -105,13 +124,13 @@ PC通过官方SDK的`log_time`将源时间写入Foxglove时间轴；场景对象
 
 固定样式不走无线；位置、尺寸、颜色、双向ACK/轮询和调度预算沿用精简方案。`/radio/link`和`/radio/layers`是本机生成的诊断，不占无线业务带宽；图层`stale`随本机监控刷新，业务通道不每秒制造新源样本。较晚订阅的Foxglove仅重播最后已发布样本，保留原源时间。源时钟回退时Linux改变32位时钟epoch；PC清空缓冲与历史，并拒绝已退役epoch的在途旧包。
 
-**升级：先更新并重启Windows接收端，再在Linux拉取并重启发送端。** 0.3.0接收端兼容schema 2及旧J/Z几何；旧版本接收端不能读取schema 3。旧发送端没有独立速度/对象源时间，接收端不能补出，因此旧数据不会生成伪造时间的`/radio/speed`样本。以`/radio/layers`各层`schema=3`确认升级生效，再导入本目录[foxglove_layout.json](foxglove_layout.json)。本机交付副本见`D:\ebyte\output\FSD_E22_源时间对齐.json`。
+**升级：先更新并重启Windows接收端，再在Linux拉取并重启发送端。** 0.3.0接收端兼容schema 2及旧J/Z几何；旧版本接收端不能读取schema 3。旧发送端没有独立速度/对象源时间，接收端不能补出，因此旧数据不会生成伪造时间的`/radio/speed`样本。以`/radio/layers`各层`schema=3`确认升级生效，再导入本目录[foxglove_layout.json](foxglove_layout.json)。本机交付副本见`D:\ebyte\output\FSD_E22_CLI与传感器.json`。
 
 Linux拉取主项目时，在主项目根执行：
 
 ```bash
 git pull --ff-only
-git submodule update --init fsd-visualization-code
+git submodule update --init --recursive
 # 已有无线进程需先正常停止，勿同时运行两个串口读者。
 bash fsd-visualization-code/radio_link/setup_linux.sh
 bash fsd-visualization-code/radio_link/start_linux.sh --mode native
@@ -148,7 +167,7 @@ bash fsd-visualization-code/radio_link/start_linux.sh --mode native
 | 6个包围框 | 160 | 184 | 24 |
 | 空地图清除快照 | 84 | 92 | 8 |
 
-当前配置的成本复现：`python tools/compare_bandwidth.py`，同时输出最初JSON协议的成本作为参考。对象源时间都相同和任意纳秒尾数的开销会不同，不把表格当成固定包长。总预算仍为160 UART字节/秒，因此增加时间字段后可达到的刷新率可能降低，原调度间隔是目标而非保证；在当前160字节/秒的软件限速下，不能承诺5～10Hz全图层实时刷新。主端在发送前为双向帧预留预算，扩展时间字段导致分片增多也纳入限速。
+当前配置的成本复现：`python tools/compare_bandwidth.py`。前表是历史0.3.0/96字节分片的编码样本，不是当前固定包长；当前预算为双向3000 UART B/s、144字节分片，间隔只是调度目标。主端为双向帧预留预算，分片、扩展、确认与重试都影响实际刷新率。
 
 ## 配置检查结果
 
@@ -161,7 +180,7 @@ bash fsd-visualization-code/radio_link/start_linux.sh --mode native
 | RViz Frame Rate=30 | 仅是本地重绘目标，不能据此要求无线每秒发送30帧 |
 | 原始点云 | RViz 模板是 `/hesai/pandar`，YAML 是 `/rslidar_points`，启动渲染会覆盖模板；两者都不订阅或传输 |
 | 相机图像 | `/camera/yolo/image_annotated`，完全排除 |
-| 速度 | 原 YAML 为 `/localization/velocity`，项目当前实车接口是 `/chcnav/velocity`；只在 radio.yaml 覆盖，不改原显示配置 |
+| 速度 | 当前topics.yaml与radio.yaml均为 `/chcnav/velocity`；radio.yaml可显式覆盖 |
 | native 模式 | 直接消费给定配置中的7个 MarkerArray 图层 |
 | bridge 模式 | 复用原配置生成器映射 `/fsd_visualization/*`，必须已有显示桥在运行 |
 
@@ -189,15 +208,15 @@ Grid 无需无线传输，在 Foxglove 的3D面板本地开启网格。速度从
 
 原生/桥接话题必须确实有生产者。无线程序不启动算法、不启动 RViz，也不凭空生成缺失锥桶、引导簇或控制目标。根 `start_full_fsd.sh` 默认用 bridge 显示；如果要对齐该运行视图，两端启动均加 `--mode bridge`。bridge 模式的原始自定义消息转换仍由原显示桥负责，本程序只订阅其 MarkerArray，不另外复制建图或规划。
 
-项目文档提示某些部署不发布原生 fused/guided 显示话题；这时 native 图层不会有数据，不能靠无线配置修复。特别是现有显示桥的地图输入类型需与实际 `/mapping/cone_map` 核对：接口文档为 `ConeMap`，旧显示桥按 `ConeArray` 订阅；遇到该差异时使用原生 `/mapping/cone_map_viz`，或先修正原显示桥，不能把无数据误判成无线丢包。
+native图层依赖相应MarkerArray生产者。当前显示桥地图订阅已使用ConeMap并经map_cones转换，不能再把历史ConeArray类型不一致当作当前实现；若实机安装副本落后，仍需更新构建并沿实际话题核对。
 
 ## 带宽与显示边界
 
-62.5 kbps 空速的理想原始上限约为7812.5字节/秒，LoRa 分包、收发切换和干扰仍会消耗空口时间。串口波特率与空中速率是不同参数；两端程序读取同一份radio.yaml使用115200 8N1，两端模块需预先配置为62.5 kbps空速。默认把**双向合计串口字节预算设为160字节/秒**，计入帧头、Base64、CRC、ACK、轮询和重试，并保留空口开销余量。本次只校正串口/空速要求，保留既有限速、超时及分片参数；它是主机发送节拍限制，不代表已经测得无线有效吞吐，也不会自动利用全部62.5 kbps带宽。
+62.5 kbps空速的理想原始上限约7812.5 B/s，实际受LoRa开销、分包、收发切换与重试影响。两端串口默认115200 8N1，当前软件双向合计预算为**3000 UART B/s**，包含帧头、Base64、CRC、确认、轮询与重试。这是发送节拍预算，不代表实测有效吞吐或固定可用带宽。
 
-Linux 主轮询，PC 只在收到有效轮询后回复，从协议上避免两个应用各自全速发送。一次串口应用帧最多226字节，144字节数据片，默认适用于模块240字节分包；**请核对模块分包长度为240**。这是配置前提，程序不自动改写。其他分包长度应调小 fragment_bytes 并重新实测，首版不承诺其定点/分包行为。
+Linux主轮询，PC只响应有效轮询。应用帧最多226字节、数据片144字节；当前RSSI解析要求真实模块分包240字节且一应用帧对应一无线包。serial.module_packet_bytes只记录设置，不自动核验或改写硬件；不能在附加RSSI开启时直接采用更小模块分包。
 
-在全部图层开启时，地图/路径的完整低带宽快照可能需要数秒至数十秒，大场景或多次重试时可能超过一分钟。radio.yaml 的 interval 是发送资格的最小间隔，不是保证更新频率。车辆位姿权重较高，但同样受链路占用影响。大幅减少 markers / points 或关闭非必要图层，才能提高其它图层更新速度；禁用输入可在个人 topics.yaml 中置空相应键，再把 radio.yaml 指向它。
+图层interval是发送资格的最小间隔，不保证实际刷新率。完整日志突发、快照大小和重试都可能延长显示延迟；指令优先发送，剩余机会用于数据。调整markers/points或关闭不需要的输入可减小快照；不要把历史160 B/s下的时延估计当作当前实测速率。
 
 几何坐标默认5厘米量化，使用整数变长编码和点间差分。点集按均匀索引抽样，LINE_STRIP保留首尾，LINE_LIST按完整线段抽样，派生引导簇显示为少量采样球点。各图层编码快照最多1200字节，未压缩二进制最多4096字节；超限继续抽稀或舍弃部分对象，源端统计仅保存在Linux `/fsd_radio/status.sampling`，不重复消耗无线。Foxglove `/radio/layers`显示本机解码对象数、接收年龄和过期状态，不具有源端逐快照抽样计数。因此本程序提供**可辨识的低带宽预览，不是RViz原消息的无损复制**。
 
@@ -263,7 +282,7 @@ ls -l /dev/serial/by-id/
 bash start_linux.sh
 ```
 
-上面的 `/path/to`、domain 和串口均须按实机填写。**不要直接猜 `/dev/ttyUSB0`：项目惯导可能正在使用它。** 推荐使用 by-id 的稳定名称。用户需有对应串口权限；本程序不修改权限、不占用已有惯导串口、不关闭其他进程。两端无线模块必须同频段、匹配信道/NETID/空速/密钥，绿色传输模式、RSSI尾字节追加关闭、模块分包240；这些条件通过厂商工具或此前配置确认。
+上面的 `/path/to`、domain和串口按现场填写；无线串口不可复用惯导设备。两端模块须同频段且匹配信道/NETID/空速/密钥，处于透传模式，分包240。RSSI按接收端分别匹配：Windows模块已开启附加RSSI，对应serial.append_rssi_pc=true；Linux默认false，只有其模块也开启时才设true。程序不自动配置模块、串口权限或其他进程。
 
 Linux 启动脚本复用 `../scripts/environment.sh` 加载 ROS/FSD 环境；缺少 `.venv` 时会提示先运行 `bash setup_linux.sh`。
 
@@ -334,7 +353,7 @@ with socket.create_connection(("127.0.0.1", 8766), timeout=3) as s:
 
 Linux保持有界 Marker `(namespace,id)` 缓存，处理ADD/DELETE/DELETEALL和ROS时间寿命；ROS时钟回退会清空历史。包括frame_locked marker在内均按源时间戳查TF，冻结为该源时刻的无线快照，不用最新车辆位置替代历史检测。
 
-无线传输的是低频场景快照：全部分片到齐、CRC正确才原子更新该图层，半幅地图不先行覆盖。未完成重组最多12组、120秒超时，消息与片数也有硬上限。实时观测在本机保留最多约10秒，便于低速链路观看，**这与RViz原生1秒marker寿命不同**。地图/规划/轨迹保留到下一快照或清除；保留不代表数据新鲜。
+无线传输的是低频场景快照：全部分片到齐、CRC正确才原子更新该图层，半幅地图不先行覆盖。未完成重组最多12组，按当前link.assembly_timeout配置30秒超时，消息与片数也有硬上限。实时观测在本机保留最多约10秒，便于低速链路观看，**这与RViz原生1秒marker寿命不同**。地图/规划/轨迹保留到下一快照或清除；保留不代表数据新鲜。
 
 本机业务消息的SDK时间与场景对象时间使用上文所述源时间，不使用接收墙钟冒充采集时间。`receive_age_s`、`source_age_lower_bound_s`、`stale`在`/radio/layers`独立暴露；源年龄保留0.1秒精度，其下限不包含完整无线排队/传输延迟。源时间保真不等于已经测得端到端延迟，源端自身的时间正确性仍由生产者负责。
 
@@ -421,7 +440,7 @@ RViz模板的Final planned path已启用；无线继续复用模板开关与topi
 
 ## 原生传感器概览面板（2026-10-20）
 
-无需安装Foxglove扩展。更新并重启Windows接收端，导入radio_link/foxglove_layout.json后选择“传感器概览”：顶部使用原生Indicator显示五类设备状态；中部使用背景色状态块显示快照有效性和GNSS定位质量，使用原生Gauge条形仪表显示接收年龄（0～20秒）；下部原生Table显示设备、状态、源端采样频率、采样时年龄、源时间与完整参数。原“CLI 日志与传感器”页也改用表格；“原始诊断”页保留原JSON数据。
+无需安装Foxglove扩展。导入foxglove_layout.json后，“传感器概览”上部为设备状态，中部为快照新鲜度、GNSS质量、年龄，下部为dashboard.rows表格与原始传感器详情；CLI页和原始诊断页不再重复专用传感器组件。更新PC派生字段需重启Windows接收端，仅换布局无需重启。
 
 接收端FoxgloveView从原有CLI传感器快照生成PC专用/radio/cli/dashboard，每秒刷新本机显示状态。states中0=未收到、1=在线、2=源端超时、3=缓存已过期；GNSS状态码独立显示，状态4固定解不等同于设备是否在线。源采集过期或超过原cli/health阈值（至少20秒）未收到快照时，状态灯显示缓存已过期；刷新提示不产生新传感器样本。表内频率来自源端CLI采集，不是无线刷新率。源纳秒时间仍在原始诊断和dashboard.source_stamp_ns保留，表内时间只转换为本机时区毫秒显示；未知源时间不补造。
 
@@ -431,11 +450,11 @@ RViz模板的Final planned path已启用；无线继续复用模板开关与topi
 
 统一使用本目录的foxglove_layout.json；不再分发旧车速布局、旧源时间布局或未采用的扩展草稿。数据新鲜度与GNSS质量均为background样式，接收年龄为bar样式；导入新版布局即可生效，无需重启接收端或占用第二个COM3串口。源码、布局与开发说明的目录约定见主项目docs/DELIVERY.md。
 
-## 0.7.0：Foxglove Parameters与CLI检查/启动/停止
+## CLI参数与管理操作（自0.7.0起）
 
-新增原生“CLI 控制与参数”页：Parameters按 `selection/module` 选择Linux YAML模块，修改 `yaml/<模块>/<完整YAML路径>` 只更新本机草稿；“保存配置”按钮将多个模块作为一次事务交给CLI校验保存。`meta/modules`列可用模块，source/revision/restart_required为只读元数据，status与dirty_count显示结果/草稿数。读取按需进行，不持续传全量参数。
+当前“参数控制”页用Parameters编辑Linux YAML草稿，保存按钮成组提交；“CLI 日志与控制”页承载检查/启动/停止/查询和状态。模块选择、文件revision与保存结果均来自CLI统一接口，不再使用旧的合并页名。
 
-原生Publish按钮包括检查、启动、停止、保存配置、丢弃草稿并重新读取、查询CLI状态。发布到 `/fsd_radio/extension/tx`，schema为 `fsd_radio.CliCommand`，例 `{"type":"cli","action":"check"}`；action取check/start/stop/save/reload/status。PC自动附加请求UUID、boot、run和到期时间；不是ROS驾驶控制话题。`/radio/cli/control`展示Linux心跳、执行中操作和最终结果。Parameters与草稿在同一PC进程所有客户端间共享；CLI重启会清除旧草稿，断链不会自动提交新操作。
+CLI页的原生Publish按钮为检查、启动、停止、查询状态；参数页为保存配置、丢弃草稿并重新读取。均发布到 `/fsd_radio/extension/tx`，schema为fsd_radio.CliCommand，action取check/start/stop/status/save/reload；PC自动附加请求ID、boot、run与到期时间。/radio/cli/control显示状态/最终结果，各客户端共享同一PC草稿。
 
 Linux适配器 `cli_control.LinuxControl` 只转发到CLI邮箱，业务由 `fsd_startup/control_api.py` 在Manager原操作线程执行；配置由CLI ConfigStore写入，目录与交叉校验复用宿主tools。检查/启动/停止直接调用已有Manager流程，不另建进程管理器。保存只写Linux文件、刷新审计，不代表在线算法生效，不自动重启；启动返回也不代表全栈已经就绪。
 
@@ -467,15 +486,15 @@ Linux CLI邮箱也先处理待执行指令、后处理参数读取，同级按�
 
 新增无串口回归用例覆盖数据队列满/日志积压时指令抢先、分片后恢复普通传输、RPC容量预留及确认优先级。按用户此前要求，本轮不执行这些用例，不运行WSL、构建或实车操作。
 
-## 0.7.2：CLI状态指示面板
+## CLI状态指示面板（自0.7.2起）
 
-“CLI 控制与参数”页顶部增加原生Indicator背景面板。绿色为运行中/预检查通过，蓝色为等待操作/FSD已停止，橙色为检查/构建/启动中，红色为预检查/启动/清理失败，灰色为等待或离线。状态来源是既有CLI心跳phase；显示CLI在线与FSD停止的区别，心跳过期不继续显示旧运行状态。PC派生/radio/cli/control.display_state，原phase和源时间保持，不增加无线数据。其他阶段见右侧原始状态详情。需重启Windows接收端并重新导入布局；Linux无需为此次面板变更升级。不运行测试或实车操作。
+“CLI 日志与控制”的原生Indicator显示CLI阶段：绿色运行/通过，蓝色等待/已停止，橙色处理中（含操作中），红色失败，灰色等待/离线。数据取原CLI心跳phase及PC管理请求状态，过期不继续显示旧运行状态。仅PC显示派生，不增加无线数据。
 
 ### 当前布局：CLI操作与参数控制分离
 
-CLI状态Indicator和检查/启动/停止/状态查询按钮移到“CLI 日志与传感器”右侧dashboard.rows传感器表格上方，与传感器表格组成同一区域；右侧下部保留车辆/任务表，左侧保留完整日志，下部放日志传输与操作结果详情。原“CLI 控制与参数”更名为“参数控制”，仅保留Parameters、保存配置、丢弃草稿并重新读取；meta/status继续反馈参数操作结果。仅调整原生布局，接口/队列/带宽不变，无需重启两端，重新导入JSON即可。未运行测试或实车操作。
+“CLI 日志与控制”不显示专用传感器表格；右侧为CLI状态、操作按钮、vehicle.rows车辆任务表以及其下方RSSI，左侧为完整日志、传输状态和结果详情。“传感器概览”集中专用传感器信息；“参数控制”只保留编辑、保存与重新读取。仅换布局无需重启或改变传输。
 
-当前布局修订：CLI页更名“CLI 日志与控制”，移除传感器表格，只保留CLI日志、状态、检查/启动/停止/查询、车辆任务和操作结果。dashboard.rows表格及原始传感器详情统一放在“传感器概览”，原始诊断页不再重复放传感器详情。“参数控制”独立保留参数编辑/保存/重新读取。仅需导入新版布局，无需重启或改变传输。
+布局分工以本节和顶部当前版本表为准。原“CLI 日志与传感器”“CLI 控制与参数”均为历史页名；当前导入文件仍保留FSD_E22_CLI与传感器.json这个交付文件名。
 
 ### 0.7.3：CLI操作中状态
 
@@ -483,7 +502,7 @@ CLI状态Indicator新增橙色“操作中”：在线CLI有活动管理请求�
 
 ## 0.7.4：数据包尾RSSI与本机指示器
 
-“CLI 日志与控制”右侧vehicle.rows表格下方新增原生RSSI背景Indicator，消费 `/radio/link.rssi.display_raw`。显示接收端测得的Linux→Windows信号原始字节，例如 `RSSI RAW 160 · 0xA0`；有效样本统一蓝色，不用未经确认的阈值区分强弱。等待、未开启解析、过期和接收端断开分别提示。样本默认10秒过期（沿用foxglove.stale_seconds），不把旧值或0当作当前强度。
+“CLI 日志与控制”右侧vehicle.rows表格下方新增原生RSSI背景Indicator，消费 `/radio/link.rssi.display_raw`。显示接收端测得的Linux→Windows信号原始字节，例如 `RSSI RAW 160 · 0xA0`；有效样本统一蓝色，不用未经确认的阈值区分强弱。等待、未开启解析、过期和接收端断开分别提示。样本默认10秒过期（沿用foxglove.stale_seconds），不继续显示过期值，也不把缺失值伪装成0。
 
 用户已开启Windows模块的数据RSSI，因此本版radio.yaml的serial.append_rssi_pc=true；serial.append_rssi_linux=false，只有Linux模块也开启数据RSSI时才改true。软件开关必须与对应接收模块REG3.bit7一致；本程序不改写模块寄存器。关闭模块附加RSSI时务必同步关闭对应软件开关，不能自动猜测某个字节是RSSI还是下一帧。Windows读取的是Linux→Windows信号；Linux本地接收RSSI没有在本版额外转发回Windows。
 

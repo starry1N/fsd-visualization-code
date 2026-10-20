@@ -4,10 +4,12 @@ ROS 2 Humble + RViz 的独立工作区，适用于已运行的 WUTA-FSD 算法�
 
 主包名：`fsd_visualization`，另含 `fsd_rviz_plugins` 图像显示插件和固定诊断面板。版本：0.1.0。依赖 ROS 2、RViz、PyYAML，以及 WUTA 的消息定义（兼容桥接模式和接口测试需要 `wuta_msgs` / `autoware_msgs`）。源码不包含模型、FSD 算法源码或机器专用的安装环境。
 
+当前无线组件版本为**0.7.4**（与RViz包0.1.0版本分开）：115200/62.5 kbps、双向3000 UART B/s；当次CLI全文日志、指令独立优先级、CLI统一参数接口、源时间对齐和PC包尾RSSI。当前页为“车辆与场景”“CLI 日志与控制”“传感器概览”“原始诊断”“参数控制”；RSSI在CLI页车辆任务表下方，先显示原始值。部署与边界见[无线说明](radio_link/README.md)。下面带版本/日期的段落为变更记录，不作为当前默认值。
+
 2026年10月17日新增可选[ E22无线遥测与Foxglove组件](radio_link/README.md)：Linux按既有显示话题量化抽样，Windows从COM3接收并经Foxglove官方SDK显示；双向JSON扩展独立于驾驶话题。无线组件独立安装/启动，原有build.sh/start.sh行为不变，Linux无线串口在`radio_link/radio.yaml`配置，启动参数可覆盖。
 
 
-2026年10月19日无线组件更新至0.2.0，采用schema 2精简二进制协议：仅传输必要几何、车辆状态及时间信息，固定显示样式在接收端本地配置。升级时先更新并重启Windows接收端，再更新Linux发送端；新版接收端兼容旧格式。刷新频率和160 UART字节/秒总预算保持不变；字节数对比、升级说明及尚未完成实机验证的范围见[无线组件说明](radio_link/README.md)与[验证记录](radio_link/VALIDATION.md)。
+2026年10月19日无线组件更新至0.2.0，采用schema 2精简二进制协议：仅传输必要几何、车辆状态及时间信息，固定显示样式在接收端本地配置。升级时先更新并重启Windows接收端，再更新Linux发送端；新版接收端兼容旧格式。刷新频率和160 UART字节/秒总预算保持不变；字节数对比、升级说明及尚未完成实机验证的范围见[无线组件说明](radio_link/README.md)与[验证记录](VALIDATION.md)。
 
 2026年10月19日源时间升级：无线组件0.3.0/schema 3保留定位、速度和各Marker独立纳秒源时间，PC缓冲排序后以源时间发布Foxglove消息；速度改用`/radio/speed.speed_m_s`。先升级Windows接收端，再在Linux拉取并重启发送端；布局与源时间缺失的处理见[无线说明](radio_link/README.md)。
 
@@ -25,7 +27,7 @@ git clone https://github.com/starry1N/fsd-visualization-code.git
 
 在 WUTA2026_FINAL 中以 `fsd-visualization-code/` 子模块挂载，路径及根启动入口保持兼容。主项目新克隆或更新后执行 `git submodule update --init --recursive`。独立使用时设置实际 `FSD_SETUP`；主项目内可复用相邻的已有FSD安装环境。修改在本仓库提交并推送，再回到主项目提交子模块指针；不要提交 build/install/log、无线虚拟环境或现场日志。
 
-设备隔离、串口固定命名、BRLTTY及本机检查结论见[共存检查](docs/DEVICE_COEXISTENCE.md)。本机E22尚未收到对端响应，不能宣称无线已双向连通；串口`connected`仅表示打开成功。RViz与无线分别运行：`bash start.sh mode:=bridge`、`bash radio_link/start_linux.sh --mode bridge`。
+设备隔离、串口固定命名、BRLTTY及历史共存检查见[共存检查](docs/DEVICE_COEXISTENCE.md)。2026-10-20已观察CLI操作结果回传及PC包尾RSSI，但未完成全部无线/ROS/TF场景验收；connected仍只代表串口打开。RViz与无线独立运行，保持现场native/bridge模式。
 
 ## 1. 解压、构建与打开 RViz
 
