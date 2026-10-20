@@ -493,4 +493,4 @@ CLI状态Indicator新增橙色“操作中”：在线CLI有活动管理请求�
 
 /radio/link.rssi字段：enabled、valid、raw、display_raw、age_s、captured_at_unix_ns、clock_domain=unix、time_origin=local_uart_capture、samples、packet_session、packet_seq。display_raw为有效原始值或-1等待/-2关闭/-3过期/-4断开；raw保留最近样本供诊断，过期时不继续作为有效值显示。时间来自本机读到尾字节的Unix纳秒采集时刻，不能冒充模块硬件时间或Linux ROS源时间。samples包含通过应用帧CRC的接收包/重传包，非业务消息计数。
 
-此为模块生成的接收端串口附加元数据，不增加应用无线消息；USB串口RX计数会包含附加字节。按要求未运行测试、WSL、构建或实机验证，尚未核验硬件追加粒度/换算；新增test_rssi.py覆盖全部256个字节、逐字节拆分、粘包、关闭解析及过期行为，未执行。接收程序按用户要求保持关闭，不自动占用COM3。完成模块设置后启动接收端并重新导入布局。
+此为模块生成的接收端串口附加元数据，不增加应用无线消息；USB串口RX计数会包含附加字节。按要求未运行测试、WSL、构建或实机验证，尚未核验硬件追加粒度/换算；新增test_rssi.py覆盖全部256个字节、逐字节拆分、粘包、关闭解析及过期行为，未执行。部署时发现用户已在22:06重新启动旧接收程序；确认无在途操作后，已重启Windows接收端加载本版，沿用COM3/115200/native，需重新导入布局。未发送CLI操作或写模块寄存器。
