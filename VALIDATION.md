@@ -91,3 +91,7 @@ bash check-gui.sh --mode bridge
 ## 2026-10-20：0.7.0 CLI统一操作与Parameters（未运行）
 
 增加有界JSON分块RPC、CLI文件邮箱适配、独立CLI心跳、PC参数/草稿缓存、原生Parameters和Publish操作布局。人工按已安装foxglove-sdk 0.29.2的websocket/Parameter/layouts类型核对调用字段，阅读请求ID去重、boot/run隔离、超时、文件版本冲突与事务处理；未运行自动测试、语法编译、构建、WSL、接收程序或Linux/硬件操作。未远程执行check/start/stop，未保存现场YAML。仅源码交付，不能据此宣称现场功能验收通过。
+
+## 2026-10-20：0.7.1独立指令优先级（用例未运行）
+
+人工阅读Outbox双FIFO、RPC优先级传播、保留名额、断链/会话切换清空，以及CLI邮箱串行优先调度。新增test_command_priority.py覆盖满普通队列/日志积压、普通分片恢复、RPC数据占用限制和指令ACK优先级；按用户要求未执行测试、构建、WSL或实车操作。优先级是下一个可发送分片的选择策略，不中断已经发出的待确认帧，也不强行中断Manager当前操作。

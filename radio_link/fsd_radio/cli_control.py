@@ -11,7 +11,7 @@ import time
 import uuid
 
 from .cli_telemetry import atomic_json
-from .rpc import RpcPeer
+from .rpc import RpcPeer, CONTROL_OPERATIONS
 
 
 def request_hash(request):
@@ -29,8 +29,10 @@ class LinuxControl:
         self.state = {}
 
     def receive(self, ident, request):
+        priority = isinstance(request.get('op'), str) and request['op'] in CONTROL_OPERATIONS
         try:
-            if len(self.pending) >= 8:
+            if len(self.pending) >= 8 or (not priority and sum(
+                    not item['priority'] for item in self.pending.values()) >= 6):
                 raise ValueError('CLI request queue is full')
             if not self.state.get('online'):
                 raise ValueError('CLI管理进程未在线，请启动CLI常驻菜单')
@@ -55,10 +57,11 @@ class LinuxControl:
                 if len(list((self.directory / 'inbox').glob('*.json'))) >= 32:
                     raise ValueError('CLI mailbox is full')
                 atomic_json(inbox, request)
-            self.pending[ident] = {'deadline': time.monotonic() + 180, 'hash': digest}
+            self.pending[ident] = {'deadline': time.monotonic() + 180, 'hash': digest,
+                                   'priority': priority}
         except (ValueError, KeyError, TypeError, OSError) as exc:
             self.peer.send(ident, {'id': ident, 'ok': False, 'stage': 'complete',
-                                  'error': str(exc), 'source_stamp_ns': str(time.time_ns())})
+                                  'error': str(exc), 'source_stamp_ns': str(time.time_ns())}, priority=priority)
 
     def tick(self):
         now = time.monotonic()
@@ -77,7 +80,7 @@ class LinuxControl:
                    ('boot', 'online', 'phase', 'running', 'run', 'active', 'last', 'config_error')}
             }, interval=2, weight=3)
             self.last_heartbeat = now
-        for ident, pending in list(self.pending.items()):
+        for ident, pending in sorted(list(self.pending.items()), key=lambda row: not row[1]['priority']):
             path = self.directory / 'results' / (ident + '.json')
             result = None
             try:
@@ -96,7 +99,7 @@ class LinuxControl:
                           'source_stamp_ns': str(time.time_ns())}
             if result is not None:
                 try:
-                    self.peer.send(ident, result)
+                    self.peer.send(ident, result, priority=pending['priority'])
                 except ValueError:
                     continue
                 self.pending.pop(ident)
@@ -216,14 +219,16 @@ class PcControl:
     def request(self, operation, **arguments):
         if not self.online():
             raise ValueError('CLI离线或状态过期，未发送指令')
-        if len(self.pending) >= 8:
+        priority = operation in CONTROL_OPERATIONS
+        if len(self.pending) >= 8 or (not priority and sum(
+                item['op'] not in CONTROL_OPERATIONS for item in self.pending.values()) >= 6):
             raise ValueError('CLI request queue is full')
         ident = uuid.uuid4().hex
         body = {'id': ident, 'op': operation, 'boot': self.heartbeat['boot'],
                 'run': self.heartbeat.get('run'),
                 'expires_ns': str(time.time_ns() + 180_000_000_000),
                 'source_stamp_ns': str(time.time_ns()), **arguments}
-        self.peer.send(ident, body)
+        self.peer.send(ident, body, priority=priority)
         self.pending[ident] = {'op': operation, 'args': arguments, 'deadline': time.monotonic() + 185}
         return ident
 

@@ -1,6 +1,6 @@
 """Linux is the master; PC only transmits in response to a valid poll.
 
-Stop-and-wait per direction, latest telemetry, bounded extension FIFO, byte pacing.
+Stop-and-wait per direction, separate bounded command/data FIFOs, byte pacing.
 The delivery callback must only enqueue work; it must not block the radio thread.
 """
 
@@ -39,6 +39,7 @@ class Outbox:
         self.lock = threading.RLock()
         self.latest, self.active, self.last = {}, {}, {}
         self.extensions = deque()
+        self.commands = deque()
         self.aux = {}
         self.counter = 0
         self.sent = 0
@@ -74,7 +75,7 @@ class Outbox:
             self.active.pop(key, None)
             self.last.pop(key, None)
 
-    def extension(self, body, source_time_ns=None, clock_domain="unix"):
+    def extension(self, body, source_time_ns=None, clock_domain="unix", *, priority=False):
         if not isinstance(body, dict):
             raise ValueError("extension must be a JSON object")
         from .essentials import source_stamp
@@ -105,9 +106,10 @@ class Outbox:
             512,
         )
         with self.lock:
-            if len(self.extensions) >= self.config["link"]["extension_queue"]:
-                raise ValueError("extension queue full")
-            self.extensions.append(raw)
+            target = self.commands if priority else self.extensions
+            if len(target) >= self.config["link"]["extension_queue"]:
+                raise ValueError("command queue full" if priority else "extension queue full")
+            target.append(raw)
 
     def next_piece(self, now):
         with self.lock:
@@ -119,8 +121,10 @@ class Outbox:
                     or now - self.last.get(key, -1e9) >= layer["interval"]
                 ):
                     candidates.append(key)
-            # Every fifth fragment can be extension traffic, never an unbounded priority flood.
-            if "cli_ack" in candidates:
+            # Commands bypass data quotas; ordinary extensions retain the old data quota.
+            if self.commands:
+                key = "_command"
+            elif "cli_ack" in candidates:
                 key = "cli_ack"
             elif "cli_run" in candidates:
                 key = "cli_run"
@@ -141,7 +145,12 @@ class Outbox:
                 return None
             if key not in self.active:
                 self.counter = (self.counter + 1) % 65536
-                raw = self.extensions[0] if key == "_extension" else self.latest[key]
+                if key == "_command":
+                    raw = self.commands[0]
+                elif key == "_extension":
+                    raw = self.extensions[0]
+                else:
+                    raw = self.latest[key]
                 size = self.config["link"]["fragment_bytes"]
                 self.active[key] = Job(
                     key,
@@ -166,7 +175,9 @@ class Outbox:
             job.index += 1
             if not success or job.index == len(job.pieces):
                 self.active.pop(job.key, None)
-                if job.key == "_extension":
+                if job.key == "_command":
+                    self.commands.popleft()
+                elif job.key == "_extension":
                     self.extensions.popleft()
                 elif success and self.aux.get(job.key, {}).get("one_shot"):
                     if self.latest.get(job.key) == b"".join(job.pieces):
@@ -198,12 +209,13 @@ class Endpoint:
 
     def reset_outbox(self):
         with self.outbox.lock:
-            if self.outbox.extensions:
+            if self.outbox.extensions or self.outbox.commands:
                 LOG.warning(
-                    "peer/session changed: extension delivery unknown; queue discarded"
+                    "peer/session changed: command/extension delivery unknown; queues discarded"
                 )
             self.outbox.active.clear()
             self.outbox.extensions.clear()
+            self.outbox.commands.clear()
             self.outbox.last.clear()
         self.pending = None
 
@@ -308,6 +320,7 @@ class Endpoint:
             ),
             "framing_errors": self.transport.framer.errors,
             "extension_queue": len(self.outbox.extensions),
+            "command_queue": len(self.outbox.commands),
         }
 
     def run(self, stop):

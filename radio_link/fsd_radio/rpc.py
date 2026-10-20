@@ -7,6 +7,8 @@ import zlib
 
 MAX_JSON = 262144
 CHUNK = 144
+CONTROL_OPERATIONS = frozenset(('cli.check', 'cli.start', 'cli.stop', 'cli.status',
+                                'cli.result', 'config.set'))
 
 
 def valid_id(value):
@@ -22,12 +24,13 @@ class RpcPeer:
         self.acks = {}
         self.error = None
 
-    def send(self, ident, value):
+    def send(self, ident, value, *, priority=False):
         if not valid_id(ident):
             raise ValueError('Invalid RPC identity')
         if ident in self.outgoing:
             return
-        if len(self.outgoing) >= 8:
+        if len(self.outgoing) >= 8 or (not priority and sum(
+                not item['priority'] for item in self.outgoing.values()) >= 6):
             raise ValueError('CLI transfer queue is full')
         raw = json.dumps(value, ensure_ascii=False, allow_nan=False, separators=(',', ':')).encode('utf-8')
         if len(raw) > MAX_JSON:
@@ -35,7 +38,8 @@ class RpcPeer:
         raw = zlib.compress(raw)
         self.outgoing[ident] = {'chunks': [base64.b64encode(raw[i:i + CHUNK]).decode('ascii')
                                          for i in range(0, len(raw), CHUNK)],
-                                'index': 0, 'sent': -1e9, 'deadline': time.monotonic() + 180}
+                                'index': 0, 'sent': -1e9, 'deadline': time.monotonic() + 180,
+                                'priority': bool(priority)}
 
     def accept(self, body):
         kind = body.get('type')
@@ -59,11 +63,15 @@ class RpcPeer:
             return True
         if direction == self.direction:
             raise ValueError('CLI transfer direction mismatch')
+        priority = body.get('p', 0)
+        if type(priority) is not int or priority not in (0, 1):
+            raise ValueError('Invalid CLI transfer priority')
         count = body.get('n')
         if not isinstance(count, int) or isinstance(count, bool) or not 1 <= count <= 2048 or index >= count:
             raise ValueError('Invalid CLI transfer length')
         if ident in self.completed:
-            self.acks[ident] = (direction, self.completed[ident])
+            done_count, done_priority = self.completed[ident]
+            self.acks[ident] = (direction, done_count, done_priority)
             return True
         try:
             chunk = base64.b64decode(body['data'], validate=True)
@@ -72,11 +80,13 @@ class RpcPeer:
         if not 1 <= len(chunk) <= CHUNK:
             raise ValueError('CLI chunk size exceeded')
         if ident not in self.incoming:
-            if len(self.incoming) >= 8:
+            if len(self.incoming) >= 8 or (not priority and sum(
+                    not item['priority'] for item in self.incoming.values()) >= 6):
                 raise ValueError('Too many incomplete CLI transfers')
-            self.incoming[ident] = {'chunks': [], 'count': count, 'updated': time.monotonic()}
+            self.incoming[ident] = {'chunks': [], 'count': count, 'updated': time.monotonic(),
+                                    'priority': priority}
         current = self.incoming[ident]
-        if current['count'] != count:
+        if current['count'] != count or current['priority'] != priority:
             raise ValueError('Conflicting CLI transfer size')
         current['updated'] = time.monotonic()
         offset = len(current['chunks'])
@@ -100,13 +110,13 @@ class RpcPeer:
                 self.receive(ident, value)
             except Exception:
                 self.incoming.pop(ident, None)
-                self.acks[ident] = (direction, 0)
+                self.acks[ident] = (direction, 0, priority)
                 raise
             self.incoming.pop(ident)
-            self.completed[ident] = count
+            self.completed[ident] = (count, priority)
             while len(self.completed) > 128:
                 self.completed.popitem(last=False)
-        self.acks[ident] = (direction, offset)
+        self.acks[ident] = (direction, offset, priority)
         return True
 
     def tick(self):
@@ -114,13 +124,14 @@ class RpcPeer:
         for ident, current in list(self.incoming.items()):
             if now - current['updated'] > 180:
                 self.incoming.pop(ident)
-        for ident, (direction, offset) in list(self.acks.items()):
+        for ident, (direction, offset, priority) in sorted(list(self.acks.items()), key=lambda row: -row[1][2]):
             try:
-                self.outbox.extension({'type': 'cli_rpc_ack', 'id': ident, 'dir': direction, 'i': offset})
+                self.outbox.extension({'type': 'cli_rpc_ack', 'id': ident, 'dir': direction,
+                                       'i': offset, 'p': int(priority)}, priority=bool(priority))
             except ValueError:
-                return
+                continue
             self.acks.pop(ident)
-        for ident, current in list(self.outgoing.items()):
+        for ident, current in sorted(list(self.outgoing.items()), key=lambda row: not row[1]['priority']):
             if now > current['deadline']:
                 self.outgoing.pop(ident)
                 self.error = 'CLI transfer timeout; result unknown, request=' + ident
@@ -131,7 +142,8 @@ class RpcPeer:
             try:
                 self.outbox.extension({'type': 'cli_rpc', 'id': ident, 'dir': self.direction,
                                        'i': index, 'n': len(current['chunks']),
-                                       'data': current['chunks'][index]})
+                                       'p': int(current['priority']),
+                                       'data': current['chunks'][index]}, priority=current['priority'])
             except ValueError:
-                return
+                continue
             current['sent'] = now

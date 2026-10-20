@@ -39,11 +39,12 @@ class RadioWorker:
                 # Old fragments cannot be completed in a new session. Extensions may
                 # have reached the peer: never silently replay them after reconnect.
                 with self.outbox.lock:
-                    if self.outbox.extensions:
+                    if self.outbox.extensions or self.outbox.commands:
                         LOG.warning(
-                            "extensions discarded after disconnect; delivery is unknown"
+                            "commands/extensions discarded after disconnect; delivery is unknown"
                         )
                     self.outbox.extensions.clear()
+                    self.outbox.commands.clear()
                     self.outbox.active.clear()
                     self.outbox.last.clear()
                 self.endpoint = None
