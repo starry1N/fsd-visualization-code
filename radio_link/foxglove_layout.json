@@ -158,20 +158,50 @@
         {
           "title": "CLI 日志与传感器",
           "layout": {
-            "direction": "row",
-            "splitPercentage": 50,
             "first": {
-              "direction": "column",
-              "splitPercentage": 80,
               "first": "RosOut!cliComplete",
-              "second": "RawMessages!cliTransfer"
+              "second": {
+                "first": "RawMessages!cliTransfer",
+                "second": "RawMessages!cliControl",
+                "splitPercentage": 45,
+                "direction": "row"
+              },
+              "splitPercentage": 75,
+              "direction": "column"
             },
             "second": {
-              "direction": "column",
-              "splitPercentage": 60,
-              "first": "Table!sensorParams",
-              "second": "Table!taskState"
-            }
+              "first": {
+                "first": {
+                  "first": "Indicator!cliState",
+                  "second": {
+                    "first": "Publish!cli_check",
+                    "second": {
+                      "first": "Publish!cli_start",
+                      "second": {
+                        "first": "Publish!cli_stop",
+                        "second": "Publish!cli_status",
+                        "splitPercentage": 50.0,
+                        "direction": "row"
+                      },
+                      "splitPercentage": 33.33,
+                      "direction": "row"
+                    },
+                    "splitPercentage": 25.0,
+                    "direction": "row"
+                  },
+                  "splitPercentage": 32,
+                  "direction": "row"
+                },
+                "second": "Table!sensorParams",
+                "splitPercentage": 22,
+                "direction": "column"
+              },
+              "second": "Table!taskState",
+              "splitPercentage": 70,
+              "direction": "column"
+            },
+            "splitPercentage": 50,
+            "direction": "row"
           }
         },
         {
@@ -233,47 +263,17 @@
           }
         },
         {
-          "title": "CLI 控制与参数",
+          "title": "参数控制",
           "layout": {
-            "direction": "column",
-            "second": {
-              "second": {
-                "second": "RawMessages!cliControl",
-                "first": "Parameters!cliConfig",
-                "direction": "row",
-                "splitPercentage": 60
-              },
-              "first": {
-                "second": {
-                  "second": {
-                    "second": {
-                      "second": {
-                        "second": "Publish!cli_status",
-                        "first": "Publish!cli_reload",
-                        "direction": "row",
-                        "splitPercentage": 50.0
-                      },
-                      "first": "Publish!cli_save",
-                      "direction": "row",
-                      "splitPercentage": 33.33
-                    },
-                    "first": "Publish!cli_stop",
-                    "direction": "row",
-                    "splitPercentage": 25.0
-                  },
-                  "first": "Publish!cli_start",
-                  "direction": "row",
-                  "splitPercentage": 20.0
-                },
-                "first": "Publish!cli_check",
-                "direction": "row",
-                "splitPercentage": 16.67
-              },
-              "direction": "column",
-              "splitPercentage": 18
+            "first": {
+              "first": "Publish!cli_save",
+              "second": "Publish!cli_reload",
+              "splitPercentage": 50.0,
+              "direction": "row"
             },
+            "second": "Parameters!cliConfig",
             "splitPercentage": 12,
-            "first": "Indicator!cliState"
+            "direction": "column"
           }
         }
       ]
@@ -513,7 +513,7 @@
       "foxglovePanelTitle": "车辆与任务状态"
     },
     "Parameters!cliConfig": {
-      "foxglovePanelTitle": "Linux YAML · 修改为草稿，点击保存配置提交"
+      "foxglovePanelTitle": "Linux YAML 参数 · 修改为草稿，保存后重启相关进程生效"
     },
     "RawMessages!cliControl": {
       "defaultExpanded": true,
