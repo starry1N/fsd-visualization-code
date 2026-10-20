@@ -56,7 +56,7 @@ def make_source(tmp_path, texts):
         )
         for i, text in enumerate(texts)
     ]
-    source = path.with_name("manager.radio.events.jsonl")
+    source = path.with_name("manager.events.jsonl")
     events = [json.loads(line) for line in source.read_text(encoding="utf-8").splitlines()]
     return source, events
 
@@ -188,7 +188,7 @@ def test_real_archive_move_and_state_switch_resume_after_restart(config, tmp_pat
     texts = ["完整故障堆栈 αβ\n" * 40, "运行结束\n"]
     for i, text in enumerate(texts):
         module.append_manager_event(run.path / "manager.log", text, "error", 123456789 + i)
-    journal = run.path / "manager.radio.events.jsonl"
+    journal = run.path / "manager.events.jsonl"
     data = journal.read_bytes()
     key = stream_id(journal)
     c = settings(config, tmp_path)
@@ -208,7 +208,7 @@ def test_real_archive_move_and_state_switch_resume_after_restart(config, tmp_pat
                                  "log_dir": str(run.path)}), encoding="utf-8")
     # No periodic scan in between: this ACK must discover the new path itself.
     forward.acknowledge(acks.pop())
-    assert forward.files[key] == run.path / "manager.radio.events.jsonl"
+    assert forward.files[key] == run.path / "manager.events.jsonl"
     forward = CliForwarder(c, Outbox(c))
     receiver = CliReceiver(tmp_path / "pc", received.append, acks.append)
     for step in range(300):
@@ -233,7 +233,7 @@ def test_selected_custom_source_survives_state_switch_and_ignores_unselected_jou
     c = settings(config, tmp_path)
     run = module.RunLog.create(tmp_path / "linux", path=tmp_path / "custom")
     module.append_manager_event(run.path / "manager.log", "完整错误\n" * 100, "error", 1)
-    journal = run.path / "manager.radio.events.jsonl"
+    journal = run.path / "manager.events.jsonl"
     state = Path(c["cli"]["state_file"])
     state.write_text(json.dumps({"radio_log_events": str(journal)}), encoding="utf-8")
     forward = CliForwarder(c, Outbox(c))
@@ -509,7 +509,7 @@ def test_stream_identity_survives_rename_and_same_directory_name_is_not_reused(t
     assert stream_id(first.with_name('manager.events.jsonl'))==e1['stream_id']
 
 
-def test_essential_policy_keeps_operational_events_and_full_failure_context(config, tmp_path):
+def test_full_forwarding_bypasses_legacy_essential_policy(config, tmp_path):
     module = source_module('log_context')
     run = module.RunLog.create(tmp_path / 'linux')
     log = run.path / 'manager.log'
@@ -557,12 +557,12 @@ def test_essential_policy_keeps_operational_events_and_full_failure_context(conf
                 for i, (text, _, keep) in enumerate(samples) if keep]
     assert [(e['text'], e['source_stamp_ns']) for e in essential] == expected
     assert stream_id(full_path) != stream_id(essential_path)
-    # Only the essential source is queued: old full journals must not drain over radio.
+    # Forward the full selected run, including entries omitted by the legacy subset.
     c = settings(config, tmp_path)
     forward = CliForwarder(c, Outbox(c))
     forward.tick(0)
-    assert list(forward.files.values()) == [essential_path]
-    assert forward.backlog == essential_path.stat().st_size
+    assert list(forward.files.values()) == [full_path]
+    assert forward.backlog == full_path.stat().st_size
     published, acks = [], []
     receiver = CliReceiver(tmp_path / 'pc', published.append, acks.append)
     for step in range(2000):
@@ -572,7 +572,8 @@ def test_essential_policy_keeps_operational_events_and_full_failure_context(conf
         forward.tick(step + 1)
         if forward.backlog == 0:
             break
-    assert [(e['text'], str(e['t'])) for e in published] == expected
+    assert [(e['text'], str(e['t'])) for e in published] == [
+        (e['text'], e['source_stamp_ns']) for e in full]
     assert forward.backlog == 0
 
 

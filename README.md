@@ -279,3 +279,5 @@ FSD_SETUP=/home/wuta/WUTA2026_FINAL/WUTA-FSD/ros2_ws/install/setup.bash bash sta
 默认UART115200、空速配置62500 bit/s、双向UART总预算3000 B/s。与CLI当前运行选择联动，只传本次必要日志及错误上下文，停止扫描历史运行；新运行同步清理Foxglove前一轮日志会话。车辆目标4 Hz，传感器快照每2秒，实际刷新取决于链路与负载。两端及CLI必须一起更新，部署、源时间与会话重置限制见[无线说明](radio_link/README.md)。本轮按用户要求未运行验证。
 
 无线0.6.1修复CLI重启后的Foxglove话题丢失：切换会话后重新公告全部通道。Windows接收端更新并重启一次，后续CLI运行切换无需手动重连；无线协议和话题名不变。
+
+无线0.6.2当前策略：完整转发CLI当次运行的manager.events.jsonl，不再筛选必要事件；Foxglove日志标题改为“本次启动完整日志”。历史运行不补传，源时间、持久化确认和双向扩展保留。部署见radio_link/README.md顶部。

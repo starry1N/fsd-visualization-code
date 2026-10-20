@@ -1,4 +1,4 @@
-"""Durable essential CLI event transfer and snapshots of the existing CLI collector.
+"""Durable complete CLI event transfer and snapshots of the existing CLI collector.
 
 The selected manager journal is the source spool. Offsets advance after a PC disk ACK.
 No ROS or Foxglove import here; serial I/O remains owned by RadioWorker.
@@ -144,7 +144,7 @@ class CliForwarder:
             files, backlog, key = {}, 0, None
             if journal:
                 path = Path(journal)
-                if path.name != "manager.radio.events.jsonl":
+                if path.name not in ("manager.events.jsonl", "manager.radio.events.jsonl"):
                     raise ValueError("invalid selected CLI journal")
                 # It is normal for a newly selected run to have no events yet.
                 try:
