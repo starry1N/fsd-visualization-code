@@ -116,7 +116,7 @@
       "showTime": true,
       "showName": true,
       "showDate": true,
-      "foxglovePanelTitle": "CLI 关键日志（含错误上下文）"
+      "foxglovePanelTitle": "本次启动关键日志（含错误上下文）"
     },
     "RawMessages!cliSensors": {
       "topicPath": "/radio/cli/sensors",

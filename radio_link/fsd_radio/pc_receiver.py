@@ -77,6 +77,7 @@ def run_pc(config, port, demo=False, duration=None):
             lambda msg: worker.outbox.update_aux(
                 "cli_ack", msg, one_shot=True, weight=100
             ),
+            current_only=True,
         )
         if config.get("cli", {}).get("enabled") and not demo
         else None
@@ -140,9 +141,15 @@ def run_pc(config, port, demo=False, duration=None):
             while not incoming.empty():
                 message = incoming.get_nowait()
                 try:
-                    if message["k"] == "cli_log" and cli_receiver:
+                    if message["k"] == "cli_run" and cli_receiver:
+                        cli_receiver.select_run(message)
+                    elif message["k"] == "cli_log" and cli_receiver:
                         cli_receiver.accept(message)
                     else:
+                        if message["k"] == "cli_status" and cli_receiver:
+                            selected = message.get('current_run') or {}
+                            if selected.get('scope') != cli_receiver.active_scope:
+                                continue
                         view.accept(message)
                     if message["k"] == "extension":
                         LOG.info(
@@ -150,7 +157,7 @@ def run_pc(config, port, demo=False, duration=None):
                             json.dumps(message["body"], ensure_ascii=False),
                         )
                 except (OSError, ValueError, TypeError, KeyError, IndexError) as exc:
-                    if cli_receiver and message["k"] == "cli_log":
+                    if cli_receiver and message["k"] in ("cli_log", "cli_run"):
                         cli_receiver.error = str(exc)
                     LOG.warning("invalid received display message: %s", exc)
             if now - last_refresh >= 1:

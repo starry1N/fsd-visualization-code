@@ -34,6 +34,7 @@ def settings(config, tmp_path):
         checkpoint_file=str(tmp_path / "checkpoint.json"),
         telemetry_file=str(tmp_path / "telemetry.json"),
         state_file=str(tmp_path / "state.json"),
+        selection_file=str(tmp_path / "linux/.runtime/fsd_manager/radio_run.json"),
         scan_seconds=0.01,
         chunk_bytes=64,
         retry_seconds=1,
@@ -169,6 +170,10 @@ def test_archive_relocation_and_pc_rewind(config, tmp_path):
     target = source.parents[2] / "skidpad" / source.parent.name
     target.parent.mkdir()
     source.parent.rename(target)
+    selection = Path(c["cli"]["selection_file"])
+    selected = json.loads(selection.read_text(encoding="utf-8"))
+    selected["journal"] = str(target / source.name)
+    selection.write_text(json.dumps(selected), encoding="utf-8")
     f.scan()
     assert old_id in f.files
     f.acknowledge({"k": "cli_ack", "stream": old_id, "offset": 0})
@@ -223,7 +228,7 @@ def test_real_archive_move_and_state_switch_resume_after_restart(config, tmp_pat
     assert forward.pending["message"]["stream"] != key
 
 
-def test_custom_source_kept_when_state_switches_and_bad_journal_is_isolated(config, tmp_path):
+def test_selected_custom_source_survives_state_switch_and_ignores_unselected_journal(config, tmp_path):
     module = source_module("log_context")
     c = settings(config, tmp_path)
     run = module.RunLog.create(tmp_path / "linux", path=tmp_path / "custom")
@@ -241,7 +246,7 @@ def test_custom_source_kept_when_state_switches_and_bad_journal_is_isolated(conf
     forward.scan()
     assert forward.files[key] == journal
     assert forward.backlog == journal.stat().st_size
-    assert "CLI journal unavailable" in forward.source_warning
+    assert forward.source_warning is None
     assert bad.read_bytes() == b"broken journal retained"
     acks = []
     receiver = CliReceiver(tmp_path / "pc", lambda event: None, acks.append)
@@ -506,8 +511,8 @@ def test_stream_identity_survives_rename_and_same_directory_name_is_not_reused(t
 
 def test_essential_policy_keeps_operational_events_and_full_failure_context(config, tmp_path):
     module = source_module('log_context')
-    log = tmp_path / 'linux/logs/sessions/run/manager.log'
-    log.parent.mkdir(parents=True)
+    run = module.RunLog.create(tmp_path / 'linux')
+    log = run.path / 'manager.log'
     samples = [
         ('终端已就绪。按 C 检查', 'title', False),
         ('[成功] 工作空间产物：/long/build/path', 'ok', False),

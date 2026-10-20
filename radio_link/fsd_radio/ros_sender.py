@@ -103,7 +103,8 @@ def run_linux(config, port, use_sim_time=False):
             )
             self.status_pub = self.create_publisher(String, "/fsd_radio/status", 10)
             self.timer = self.create_timer(
-                0.5, self.tick, clock=Clock(clock_type=ClockType.STEADY_TIME)
+                config["link"].get("tick_seconds", 0.5), self.tick,
+                clock=Clock(clock_type=ClockType.STEADY_TIME)
             )
 
         def lookup(self, frame, stamp):

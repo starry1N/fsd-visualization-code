@@ -54,7 +54,7 @@ class Outbox:
             self.latest[key] = packed
 
     def update_aux(self, key, message, interval=0.1, weight=1, one_shot=False):
-        if key not in ("cli_log", "cli_ack", "cli_status"):
+        if key not in ("cli_log", "cli_ack", "cli_status", "cli_run"):
             raise ValueError("unknown auxiliary telemetry")
         with self.lock:
             self.aux[key] = {
@@ -72,6 +72,7 @@ class Outbox:
         with self.lock:
             self.latest.pop(key, None)
             self.active.pop(key, None)
+            self.last.pop(key, None)
 
     def extension(self, body, source_time_ns=None, clock_domain="unix"):
         if not isinstance(body, dict):
@@ -121,6 +122,8 @@ class Outbox:
             # Every fifth fragment can be extension traffic, never an unbounded priority flood.
             if "cli_ack" in candidates:
                 key = "cli_ack"
+            elif "cli_run" in candidates:
+                key = "cli_run"
             elif "cli_log" in candidates and self.sent % 3 != 2:
                 key = "cli_log"
             elif self.extensions and (not candidates or self.sent % 5 == 0):
@@ -312,6 +315,9 @@ class Endpoint:
         pace_start, charged = time.monotonic(), 0
         while not stop.is_set():
             if self.role == MASTER:
+                # Idle time must not build unlimited credit for an unpaced log burst.
+                charged = max(charged, (time.monotonic() - pace_start)
+                              * settings["bytes_per_second"] - MAX_WIRE)
                 # Reserve both directions BEFORE sending; at most one wire frame of burst.
                 request_size = len(self.packet().encode())
                 reservation = request_size + MAX_WIRE

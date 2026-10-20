@@ -8,20 +8,22 @@ serial:
   linux_port: /dev/serial/by-id/usb-1a86_USB_Serial-if00-port0  # E22 CH340; single matching adapter.
   baud: 115200  # UART 8N1; both E22 modules must use 62.5 kbps air rate.
 link:
-  bytes_per_second: 160  # aggregate, BOTH directions including framing and retries.
+  air_rate_bps: 62500  # Module setting, recorded here for budget validation; not programmed by this app.
+  bytes_per_second: 3000  # Aggregate UART bytes, BOTH directions, framing and retries included.
   fragment_bytes: 144  # At most 226 UART bytes; requires E22 240-byte module packets.
-  response_timeout: 4.0
-  turnaround_seconds: 0.25
+  response_timeout: 1.2
+  turnaround_seconds: 0.01
+  tick_seconds: 0.05
   retries: 2
   extension_queue: 8
   max_message_bytes: 4096
-  assembly_timeout: 120.0
+  assembly_timeout: 30.0
 foxglove:
   host: 127.0.0.1
   port: 8765
   control_port: 8766
   stale_seconds: 10.0
-  alignment_buffer_seconds: 3.0  # Local reorder buffer; does not add radio traffic.
+  alignment_buffer_seconds: 0.5  # Local reorder buffer; does not add radio traffic.
   speed_alignment_tolerance_seconds: 0.2  # State speed only when source times agree.
   # Local rendering only. These sizes, widths and colors never cross the radio.
   styles:
@@ -43,23 +45,24 @@ geometry:
   cache_markers: 256
   snapshot_bytes: 1200  # compressed application bytes, before packet framing.
 layers:
-  vehicle: {interval: 2.0, weight: 4}
-  fused: {interval: 8.0, weight: 2, markers: 12, points: 12}
-  control: {interval: 4.0, weight: 2, markers: 4, points: 12}
-  guided: {interval: 15.0, weight: 1, markers: 6, points: 12}
-  map: {interval: 30.0, weight: 1, markers: 48, points: 64}
-  centerline: {interval: 30.0, weight: 1, markers: 4, points: 48}
-  path: {interval: 20.0, weight: 1, markers: 4, points: 48}
-  trajectory: {interval: 30.0, weight: 1, markers: 3, points: 48}
+  vehicle: {interval: 0.25, weight: 4}
+  fused: {interval: 1.0, weight: 2, markers: 12, points: 12}
+  control: {interval: 0.5, weight: 2, markers: 4, points: 12}
+  guided: {interval: 2.0, weight: 1, markers: 6, points: 12}
+  map: {interval: 5.0, weight: 1, markers: 48, points: 64}
+  centerline: {interval: 5.0, weight: 1, markers: 4, points: 48}
+  path: {interval: 3.0, weight: 1, markers: 4, points: 48}
+  trajectory: {interval: 5.0, weight: 1, markers: 3, points: 48}
 
 cli:
   enabled: true
   project_root: ../..
   state_file: ../../.runtime/fsd_manager/state.json
+  selection_file: ../../.runtime/fsd_manager/radio_run.json
   telemetry_file: ../../.runtime/fsd_manager/telemetry.json
   checkpoint_file: ../../.runtime/fsd_radio/cli_tx.json
   pc_storage: ~/.fsd_radio/cli_received
-  chunk_bytes: 512
-  scan_seconds: 5.0
-  retry_seconds: 30.0
-  status_interval: 10.0
+  chunk_bytes: 2048
+  scan_seconds: 0.2
+  retry_seconds: 3.0
+  status_interval: 2.0

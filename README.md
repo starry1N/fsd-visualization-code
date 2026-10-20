@@ -273,3 +273,7 @@ FSD_SETUP=/home/wuta/WUTA2026_FINAL/WUTA-FSD/ros2_ws/install/setup.bash bash sta
 ```
 
 状态快照消息契约见[主仓库接口文档](https://github.com/707GLobal/WUTA2026_FINAL/blob/main/docs/ROS_INTERFACE.md)。显示桥不发布GO、控制、任务或TF。需要再次构建时运行`bash build.sh`；不会自动修改算法或增加新的权威生产者。
+
+## E22无线0.6.0（2026-10-20）
+
+默认UART115200、空速配置62500 bit/s、双向UART总预算3000 B/s。与CLI当前运行选择联动，只传本次必要日志及错误上下文，停止扫描历史运行；新运行同步清理Foxglove前一轮日志会话。车辆目标4 Hz，传感器快照每2秒，实际刷新取决于链路与负载。两端及CLI必须一起更新，部署、源时间与会话重置限制见[无线说明](radio_link/README.md)。本轮按用户要求未运行验证。

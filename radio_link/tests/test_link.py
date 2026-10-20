@@ -4,7 +4,7 @@ import threading
 import time
 import random
 from fsd_radio.link import Endpoint, Outbox
-from fsd_radio.protocol import MASTER, SLAVE, Framer, Packet
+from fsd_radio.protocol import MASTER, SLAVE, MAX_WIRE, Framer, Packet
 
 
 class MemoryTransport:
@@ -152,5 +152,5 @@ def test_aggregate_byte_pacing_both_directions(config):
     # Initial one-frame burst is bounded; no independent per-direction full-rate budget.
     assert (
         a.transport.tx_bytes + b.transport.tx_bytes
-        <= elapsed * config["link"]["bytes_per_second"] + 162
+        <= elapsed * config["link"]["bytes_per_second"] + MAX_WIRE
     )

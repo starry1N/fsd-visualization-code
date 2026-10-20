@@ -19,7 +19,7 @@ def test_topics_are_resolved_by_existing_renderer(config):
 @pytest.mark.parametrize(
     "name,value",
     [
-        ("bytes_per_second", 300),
+        ("bytes_per_second", 100000),
         ("fragment_bytes", 240),
         ("response_timeout", float("nan")),
         ("retries", -1),

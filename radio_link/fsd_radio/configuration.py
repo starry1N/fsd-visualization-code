@@ -73,18 +73,20 @@ def load_config(filename, mode=None):
         "enabled": True,
         "project_root": "../..",
         "state_file": "../../.runtime/fsd_manager/state.json",
+        "selection_file": "../../.runtime/fsd_manager/radio_run.json",
         "telemetry_file": "../../.runtime/fsd_manager/telemetry.json",
         "checkpoint_file": "../../.runtime/fsd_radio/cli_tx.json",
         "pc_storage": "~/.fsd_radio/cli_received",
-        "chunk_bytes": 512,
-        "scan_seconds": 5.0,
-        "retry_seconds": 30.0,
-        "status_interval": 10.0,
+        "chunk_bytes": 2048,
+        "scan_seconds": 0.2,
+        "retry_seconds": 3.0,
+        "status_interval": 2.0,
     }
     config["cli"] = {**cli_defaults, **config.get("cli", {})}
     for key in (
         "project_root",
         "state_file",
+        "selection_file",
         "telemetry_file",
         "checkpoint_file",
         "pc_storage",
@@ -117,9 +119,13 @@ def validate(config):
         "assembly_timeout",
     ):
         positive(link[name], name)
-    if link["bytes_per_second"] > 240:
+    baud = config["serial"]["baud"]
+    air_rate = link.get("air_rate_bps", 2400)
+    if not isinstance(baud, int) or baud <= 0 or not isinstance(air_rate, int) or air_rate <= 0:
+        raise ValueError("serial.baud and link.air_rate_bps must be positive integers")
+    if link["bytes_per_second"] > 0.8 * min(baud / 10, air_rate / 8):
         raise ValueError(
-            "Conservative pacing profile allows <=240 UART bytes/s aggregate; default is 160"
+            "UART aggregate budget exceeds 80% of the configured serial/air-rate ceiling"
         )
     if (
         not isinstance(link["fragment_bytes"], int)
@@ -133,8 +139,13 @@ def validate(config):
             raise ValueError(f"{name} must be a positive integer")
     if link["max_message_bytes"] > 4096:
         raise ValueError("max_message_bytes cannot exceed 4096")
-    if link["response_timeout"] < 2.0:
-        raise ValueError("response_timeout must be >=2 seconds for the conservative pacing profile")
+    minimum_response = (2 * 226 * 10 / baud + 2 * 226 * 8 / air_rate
+                        + 2 * link["turnaround_seconds"] + 0.05)
+    if link["response_timeout"] < max(0.2, minimum_response):
+        raise ValueError("response_timeout is too short for the configured UART/air rate")
+    tick = link.get("tick_seconds", 0.5)
+    if not isinstance(tick, (int, float)) or not math.isfinite(tick) or not 0.02 <= tick <= 1:
+        raise ValueError("link.tick_seconds must be 0.02..1 seconds")
     positive(config["geometry"]["quantization_m"], "quantization_m")
     positive(config["foxglove"]["stale_seconds"], "stale_seconds")
     for name in ("cache_markers", "snapshot_bytes"):

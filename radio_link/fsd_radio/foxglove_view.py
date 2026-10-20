@@ -206,6 +206,8 @@ class FoxgloveView:
         self.cli_log_cache_bytes = 0
         self.cli_status_received = None
         self.cli_collector_stale = True
+        self.cli_scope = None
+        self.cli_run_state = None
         self.snapshots = {}
         self.pending = []
         self.replay = {}
@@ -300,6 +302,27 @@ class FoxgloveView:
 
     def accept(self, message):
         received = time.monotonic()
+        if message["k"] == "cli_run":
+            if message == self.cli_run_state:
+                return
+            self.cli_run_state = dict(message)
+            if message['scope'] != self.cli_scope:
+                self.cli_scope = message['scope']
+                self.cli_log_cache.clear()
+                self.cli_log_cache_bytes = 0
+                self.cli_status_received = None
+                self.cli_collector_stale = True
+                self.replay = {topic: cached for topic, cached in self.replay.items()
+                               if not topic.startswith('/radio/cli/')}
+                # Native Log panels otherwise retain the previous startup's rows.
+                self.server.clear_session('fsd-run-' + self.cli_scope)
+                for channel, value, stamp in list(self.replay.values()):
+                    channel.log(value, log_time=stamp)
+                for key, (snapshot, captured) in list(self.snapshots.items()):
+                    self.render(key, snapshot, max(0, received - captured))
+            self.log('cli/transfer', {'source_stamp_ns': str(message['t']),
+                                     'current_run': message, 'scope': 'current_run_only'}, message['t'])
+            return
         if message["k"] == "cli_event":
             stamp = source_stamp(message["t"])
             if stamp == 0:
@@ -353,6 +376,8 @@ class FoxgloveView:
                     "collector_error": value["collector_error"],
                     "sender_error": value["sender_error"],
                     "source_warning": value["source_warning"],
+                    "current_run": value["current_run"],
+                    "scope": "current_run_only",
                 },
                 stamp,
             )
@@ -509,6 +534,13 @@ class FoxgloveView:
             if topic == "/radio/cli/log":
                 for value, stamp, _ in self.cli_log_cache:
                     self.cli_log_channel.log(value, log_time=stamp)
+                continue
+            if topic.startswith('/radio/scene/'):
+                key = topic.removeprefix('/radio/scene/')
+                cached_scene = self.snapshots.get(key)
+                if cached_scene:
+                    snapshot, captured = cached_scene
+                    self.render(key, snapshot, max(0, now - captured))
                 continue
             cached = self.replay.get(topic)
             if cached:

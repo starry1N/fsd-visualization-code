@@ -160,6 +160,7 @@ def unpack_message(data, limit=4096):
         "vehicle",
         "extension",
         "cli_status",
+        "cli_run",
     ):
         raise ValueError("message kind")
     if message["k"] == "extension" and not isinstance(message.get("body"), dict):
