@@ -71,7 +71,17 @@ def main():
                 )
             from .ros_sender import run_linux
 
-            run_linux(config, port, args.use_sim_time)
+            # Shared by the standalone entry and CLI autostart. Keep the lock
+            # in the sender process, independent of the Manager lifetime.
+            import fcntl
+            lock_path = Path(config['cli']['project_root']) / '.runtime/fsd_radio/sender.lock'
+            lock_path.parent.mkdir(parents=True, exist_ok=True)
+            with lock_path.open('a') as sender_lock:
+                try:
+                    fcntl.flock(sender_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except BlockingIOError:
+                    raise ValueError('Linux radio sender already running for this project') from None
+                run_linux(config, port, args.use_sim_time)
         else:
             from .pc_receiver import run_pc
 
