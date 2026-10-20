@@ -129,8 +129,8 @@ Visualization Manager:
       Value: /planning/centerline_viz
     Value: true
   - Class: rviz_default_plugins/MarkerArray
-      Enabled: true
-      Name: Final planned path
+    Enabled: true
+    Name: Final planned path
     Namespaces: {}
     Topic:
       Depth: 1
