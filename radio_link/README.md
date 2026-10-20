@@ -421,8 +421,12 @@ RViz模板的Final planned path已启用；无线继续复用模板开关与topi
 
 ## 原生传感器概览面板（2026-10-20）
 
-无需安装Foxglove扩展。更新并重启Windows接收端，导入radio_link/foxglove_layout.json后选择“传感器概览”：顶部使用原生Indicator显示五类设备状态；中部显示快照有效性、GNSS定位质量及原生Gauge接收年龄；下部原生Table显示设备、状态、源端采样频率、采样时年龄、源时间与完整参数。原“CLI 日志与传感器”页也改用表格；“原始诊断”页保留原JSON数据。
+无需安装Foxglove扩展。更新并重启Windows接收端，导入radio_link/foxglove_layout.json后选择“传感器概览”：顶部使用原生Indicator显示五类设备状态；中部使用背景色状态块显示快照有效性和GNSS定位质量，使用原生Gauge条形仪表显示接收年龄（0～20秒）；下部原生Table显示设备、状态、源端采样频率、采样时年龄、源时间与完整参数。原“CLI 日志与传感器”页也改用表格；“原始诊断”页保留原JSON数据。
 
 接收端FoxgloveView从原有CLI传感器快照生成PC专用/radio/cli/dashboard，每秒刷新本机显示状态。states中0=未收到、1=在线、2=源端超时、3=缓存已过期；GNSS状态码独立显示，状态4固定解不等同于设备是否在线。源采集过期或超过原cli/health阈值（至少20秒）未收到快照时，状态灯显示缓存已过期；刷新提示不产生新传感器样本。表内频率来自源端CLI采集，不是无线刷新率。源纳秒时间仍在原始诊断和dashboard.source_stamp_ns保留，表内时间只转换为本机时区毫秒显示；未知源时间不补造。
 
 原生组件只读现有接收结果，没有扩展包、npm、账户扩展安装或Linux变更，不增加无线字段、带宽及ROS订阅。新布局须配套本版PC接收端，旧接收程序没有dashboard通道。
+
+### 当前布局与交付文件
+
+统一使用本目录的foxglove_layout.json；不再分发旧车速布局、旧源时间布局或未采用的扩展草稿。数据新鲜度与GNSS质量均为background样式，接收年龄为bar样式；导入新版布局即可生效，无需重启接收端或占用第二个COM3串口。源码、布局与开发说明的目录约定见主项目docs/DELIVERY.md。

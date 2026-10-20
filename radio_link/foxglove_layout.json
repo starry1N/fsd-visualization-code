@@ -406,7 +406,7 @@
     },
     "Indicator!sensorFresh": {
       "path": "/radio/cli/dashboard.stale",
-      "style": "bulb",
+      "style": "background",
       "fontSize": 20,
       "rules": [
         {
@@ -428,7 +428,7 @@
     },
     "Indicator!gnssQuality": {
       "path": "/radio/cli/dashboard.gnss_quality",
-      "style": "bulb",
+      "style": "background",
       "fontSize": 20,
       "rules": [
         {
@@ -450,7 +450,7 @@
     },
     "Gauge!sensorAge": {
       "path": "/radio/cli/dashboard.receive_age_s",
-      "style": "dial",
+      "style": "bar",
       "minValue": 0,
       "maxValue": 20,
       "tickInterval": 5,
