@@ -584,6 +584,12 @@
       "style": "background",
       "rules": [
         {
+          "rawValue": "操作中",
+          "operator": "=",
+          "color": "#f59e0b",
+          "label": "CLI 在线 · 操作中"
+        },
+        {
           "label": "等待 CLI 状态",
           "operator": "=",
           "color": "#64748b",

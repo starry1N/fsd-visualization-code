@@ -343,10 +343,17 @@ class PcControl:
             if self.view and self.changed and time.monotonic() - self.last_publish >= .5:
                 parameters = self.parameters()
                 stamp = int(self.heartbeat.get('t') or 0)
+                # Automatic parameter reads do not make the CLI operation indicator busy.
+                busy = bool(online and (
+                    (self.heartbeat.get('active') or {}).get('op') in CONTROL_OPERATIONS
+                    or any(item['op'] in CONTROL_OPERATIONS for item in self.pending.values())
+                    or any(action in ('check', 'start', 'stop', 'status', 'save') for action in self.queue)))
                 status = {
                     **self.heartbeat, 'online': online, 'status': self.cache.get('meta/status'),
+                    'busy': busy,
                     'display_state': ('等待CLI状态' if not self.heartbeat else
                                       '离线' if not online else
+                                      '操作中' if busy else
                                       str(self.heartbeat.get('phase') or '未知状态')),
                     'dirty_count': self.cache.get('meta/dirty_count', 0),
                     'pending': [{'id': k, 'op': v['op']} for k, v in self.pending.items()],
