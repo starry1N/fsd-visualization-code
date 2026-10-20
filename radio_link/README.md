@@ -388,3 +388,7 @@ schema 3在Windows完成离线、官方SDK实际WebSocket与虚拟串口测试�
 ## 本机部署检查
 
 本机串口映射、USB拓扑、资源观察及验证限制见[设备共存检查](../docs/DEVICE_COEXISTENCE.md)。`connected=true`不证明空口连通；检查`rx_bytes`、`peer_session`、`peer_age_s`与输入图层，并完成带ID的Ping/Pong。Linux安装脚本兼容缺少ensurepip但已有系统pip的环境；构建依赖要求setuptools>=64，测试使用pytest<9以兼容Humble测试插件。
+
+## 0.6.1：CLI重启后继续显示
+
+修复0.6.0在CLI切换运行时仅调用SDK clear_session导致Foxglove清空话题、无法继续订阅的问题。现在会话重置后关闭旧通道并重新创建全部场景、JSON和日志通道，重新公告话题；缓存重放绑定新通道，保留源时间。话题名与布局不变，不增加无线数据。升级Windows接收端并重启一次生效，此后CLI重启无需手动关闭连接再打开。仅人工阅读修改，按用户此前要求未运行自动化验证。

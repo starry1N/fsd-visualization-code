@@ -182,26 +182,7 @@ class FoxgloveView:
         self.config = config
         self.context = foxglove.Context()
         self.listener = PublishListener(enqueue)
-        self.channels = {
-            name: SceneUpdateChannel("/radio/scene/" + name, context=self.context)
-            for name in config["layers"]
-        }
-        self.json_channels = {
-            name: foxglove.Channel("/radio/" + name, context=self.context)
-            for name in (
-                "state",
-                "speed",
-                "link",
-                "layers",
-                "extension/rx",
-                "extension/status",
-                "cli/sensors",
-                "cli/vehicle",
-                "cli/transfer",
-                "cli/health",
-            )
-        }
-        self.cli_log_channel = LogChannel("/radio/cli/log", context=self.context)
+        self._create_channels()
         self.cli_log_cache = deque()
         self.cli_log_cache_bytes = 0
         self.cli_status_received = None
@@ -232,6 +213,43 @@ class FoxgloveView:
             supported_encodings=["json"],
             server_listener=self.listener,
         )
+
+    def _create_channels(self):
+        self.channels = {
+            name: SceneUpdateChannel("/radio/scene/" + name, context=self.context)
+            for name in self.config["layers"]
+        }
+        self.json_channels = {
+            name: foxglove.Channel("/radio/" + name, context=self.context)
+            for name in (
+                "state",
+                "speed",
+                "link",
+                "layers",
+                "extension/rx",
+                "extension/status",
+                "cli/sensors",
+                "cli/vehicle",
+                "cli/transfer",
+                "cli/health",
+            )
+        }
+        self.cli_log_channel = LogChannel("/radio/cli/log", context=self.context)
+
+    def _reset_session(self, scope):
+        # A new serverInfo session clears Foxglove's topic registry as well as history.
+        # Existing SDK channels are not automatically advertised again by clear_session.
+        self.server.clear_session('fsd-run-' + scope)
+        for channel in (*self.channels.values(), *self.json_channels.values(), self.cli_log_channel):
+            channel.close()
+        self._create_channels()
+        # Replay must reference the newly advertised channels, never closed handles.
+        self.replay = {
+            '/radio/' + name: (channel, self.replay['/radio/' + name][1],
+                              self.replay['/radio/' + name][2])
+            for name, channel in self.json_channels.items()
+            if not name.startswith('cli/') and '/radio/' + name in self.replay
+        }
 
     def log(self, name, value, log_time=None):
         stamp = self.latest_source_ns if log_time is None else log_time
@@ -312,10 +330,8 @@ class FoxgloveView:
                 self.cli_log_cache_bytes = 0
                 self.cli_status_received = None
                 self.cli_collector_stale = True
-                self.replay = {topic: cached for topic, cached in self.replay.items()
-                               if not topic.startswith('/radio/cli/')}
                 # Native Log panels otherwise retain the previous startup's rows.
-                self.server.clear_session('fsd-run-' + self.cli_scope)
+                self._reset_session(self.cli_scope)
                 for channel, value, stamp in list(self.replay.values()):
                     channel.log(value, log_time=stamp)
                 for key, (snapshot, captured) in list(self.snapshots.items()):
