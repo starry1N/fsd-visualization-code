@@ -121,30 +121,50 @@ class CliForwarder:
         self.backlog = 0
 
     def scan(self):
-        # Only this manager's journal format, never modules/*.log or ROS logs.
-        self.files = {
-            stream_id(p): p
-            for p in sorted((self.root / "logs").glob("*/*/manager.radio.events.jsonl"))
-        }
+        # Keep known external/custom runs after the CLI switches to another session.
+        # Discover both layouts; never transfer full journals or component logs.
+        candidates = set(self.files.values())
+        for name in ("wuta_logs", "logs"):
+            candidates.update(
+                (self.root / name).glob("*/*/manager.radio.events.jsonl")
+            )
+        warnings = []
         try:
             current = json.loads(self.state_file.read_text(encoding="utf-8"))
+            if not isinstance(current, dict):
+                raise ValueError("invalid CLI state")
             if current.get("radio_log_events"):
                 journal = Path(current["radio_log_events"])
-                if journal.name == "manager.radio.events.jsonl" and journal.is_file():
-                    self.files[stream_id(journal)] = journal
-            self.source_warning = (
-                None
-                if current.get("radio_log_events")
-                else "Upgrade and restart CLI to create essential manager.radio.events.jsonl"
-            )
+                if journal.name == "manager.radio.events.jsonl":
+                    candidates.add(journal)
+            else:
+                warnings.append("Upgrade and restart CLI to create essential manager.radio.events.jsonl")
+            # finish_run keeps the archived run here while radio_log_events points
+            # back at the manager session. Also covers custom output locations.
+            if current.get("log_dir"):
+                candidates.add(Path(current["log_dir"]) / "manager.radio.events.jsonl")
         except (OSError, ValueError):
-            self.source_warning = (
+            warnings.append(
                 "CLI state file is unavailable; archived journals are still forwarded"
             )
-        self.backlog = sum(
-            max(0, p.stat().st_size - self.cursors.get(key, 0))
-            for key, p in self.files.items()
-        )
+        files, backlog = {}, {}
+        for path in sorted(candidates):
+            try:
+                size = path.stat().st_size
+                if not size or not path.is_file():
+                    continue
+                key = stream_id(path)
+                files[key] = path
+                backlog[key] = max(0, size - self.cursors.get(key, 0))
+            except FileNotFoundError:
+                continue  # A pending run may have just been moved for archive.
+            except (OSError, ValueError) as exc:
+                warnings.append(f"CLI journal unavailable: {path}: {exc}")
+        self.files = files
+        self.backlog = sum(backlog.values())
+        if self.pending is not None and self.pending["message"]["stream"] not in files:
+            warnings.append("Unacknowledged CLI source unavailable; pending block and checkpoint retained")
+        self.source_warning = "; ".join(warnings[:3]) or None
 
     def tick(self, now=None):
         now = time.monotonic() if now is None else now
@@ -242,11 +262,16 @@ class CliForwarder:
         key = message["stream"]
         offset = message["offset"]
         path = self.files.get(key)
+        if path is None or not path.is_file():
+            # An ACK can arrive before the periodic scan notices the archive move.
+            self.scan()
+            path = self.files.get(key)
         if path is None or offset > path.stat().st_size:
             raise ValueError("CLI ACK outside source journal")
         # A PC with a restored/empty disk may request replay from an earlier offset.
-        self.cursors[key] = offset
-        atomic_json(self.checkpoint, self.cursors)
+        cursors = {**self.cursors, key: offset}
+        atomic_json(self.checkpoint, cursors)
+        self.cursors = cursors
         self.pending = None
         self.outbox.remove_aux("cli_log")
         self.scan()

@@ -4,7 +4,11 @@
 
 无线模块按用户确认的**透传、9600 8N1、空速 2.4 kbps**使用。程序不发送模块配置命令，不修改频率、密钥、地址、工作模式或功率。Linux 串口读取 `radio.yaml:serial.linux_port`，启动参数可覆盖；使用前核对实际无线模块设备，当前默认by-id路径见部署说明。
 
-## CLI必要日志与传感器（0.5.0）
+## CLI必要日志与传感器（0.5.1）
+
+0.5.1适配新的运行日志布局：自动扫描`wuta_logs/<赛项或sessions>/<运行目录>/manager.radio.events.jsonl`，兼容旧`logs/`，也读取CLI状态中的`radio_log_events`和`log_dir`。直接全栈入口即使没有CLI状态文件，标准运行目录仍可被发现。当前进程已经发现的自定义目录会继续追踪；若无线进程重启后，自定义目录既不在标准根目录、也不再被状态文件引用，需要恢复其状态路径才能再次发现。
+
+CLI结束运行并切回会话、pending目录归档移动后，按journal内部stream ID重新定位源文件；磁盘确认早于周期扫描到达时会立即重扫，沿用原偏移和断点。只扫描必要journal，不自动转发组件日志或完整事件文件。无法读取的单个journal保留并显示警告，其余有效源继续发送；源文件被删除或损坏仍需人工恢复。
 
 按当前CLI的实际输出筛选无线日志，Linux的`manager.log`和`manager.events.jsonl`继续保留全文。原日志写入者在旁边生成独立的`manager.radio.events.jsonl`作为无线源，单独stream ID与断点；不读取界面刷新，也不转发所有`modules/*.log`全文。0.4.0的未筛选journal不再自动排队，也不删除其本地历史；新策略从CLI重启后的事件生效，不回填历史或猜测源时间。
 
@@ -40,11 +44,11 @@ Foxglove布局新增“CLI 日志与传感器”页：
 
 日志有待发块时至少优先选取每三次调度中的前两次；没有日志则让其他数据使用带宽，不固定预留闲置上行槽。状态快照目标间隔10秒，车辆2秒、控制目标4秒；融合8秒、引导簇15秒、地图/中心线/历史轨迹30秒、规划路径20秒。它们是调度目标，日志突发时实际间隔会延长；双向ACK、PC指令、重试均计入160字节/秒。
 
-先更新并重启Windows接收端，再在Linux主项目根执行：
+在Linux主项目根同步主仓库锁定的配套版本，再执行无线安装：
 
 ```bash
 git pull --ff-only
-git submodule update --init fsd_startup fsd-visualization-code
+git submodule update --init --recursive
 bash fsd-visualization-code/radio_link/setup_linux.sh
 ```
 

@@ -43,9 +43,9 @@ def settings(config, tmp_path):
 
 
 def make_source(tmp_path, texts):
-    path = tmp_path / "linux/logs/sessions/20261019_180000_123456/manager.log"
-    path.parent.mkdir(parents=True)
     module = source_module("log_context")
+    run = module.RunLog.create(tmp_path / "linux", mission_source="fallback_pending")
+    path = run.path / "manager.log"
     events = [
         module.append_manager_event(
             path,
@@ -174,6 +174,80 @@ def test_archive_relocation_and_pc_rewind(config, tmp_path):
     f.acknowledge({"k": "cli_ack", "stream": old_id, "offset": 0})
     f.tick(1)
     assert f.pending["message"]["offset"] == 0
+
+
+def test_real_archive_move_and_state_switch_resume_after_restart(config, tmp_path):
+    module = source_module("log_context")
+    root = tmp_path / "linux"
+    run = module.RunLog.create(root, mission_source="fallback_pending")
+    texts = ["完整故障堆栈 αβ\n" * 40, "运行结束\n"]
+    for i, text in enumerate(texts):
+        module.append_manager_event(run.path / "manager.log", text, "error", 123456789 + i)
+    journal = run.path / "manager.radio.events.jsonl"
+    data = journal.read_bytes()
+    key = stream_id(journal)
+    c = settings(config, tmp_path)
+    state = Path(c["cli"]["state_file"])
+    state.write_text(json.dumps({"radio_log_events": str(journal)}), encoding="utf-8")
+    forward = CliForwarder(c, Outbox(c))
+    received, acks = [], []
+    receiver = CliReceiver(tmp_path / "pc", received.append, acks.append)
+    forward.tick(0)
+    receiver.accept(unpack_message(pack_message(forward.pending["message"])))
+    # The actual lifecycle reads the fallback mission and moves the run at finish.
+    metadata = json.loads((run.path / "run.json").read_text(encoding="utf-8"))
+    metadata.update(mission="skidpad", mission_source="fallback_observed")
+    (run.path / "run.json").write_text(json.dumps(metadata), encoding="utf-8")
+    run.finish(0, "test_exit")
+    state.write_text(json.dumps({"radio_log_events": str(root / "wuta_logs/sessions/session/manager.radio.events.jsonl"),
+                                 "log_dir": str(run.path)}), encoding="utf-8")
+    # No periodic scan in between: this ACK must discover the new path itself.
+    forward.acknowledge(acks.pop())
+    assert forward.files[key] == run.path / "manager.radio.events.jsonl"
+    forward = CliForwarder(c, Outbox(c))
+    receiver = CliReceiver(tmp_path / "pc", received.append, acks.append)
+    for step in range(300):
+        forward.tick(step)
+        if forward.pending is None:
+            break
+        receiver.accept(unpack_message(pack_message(forward.pending["message"])))
+        forward.acknowledge(acks.pop())
+    assert forward.backlog == 0
+    assert [event["text"] for event in received] == texts
+    assert (tmp_path / "pc" / f"{key}.events.jsonl").read_bytes() == data
+    # Ending a run must not block the next run's critical events.
+    next_run = module.RunLog.create(root, mission="acceleration")
+    module.append_manager_event(next_run.path / "manager.log", "下一次运行\n", "error", 123456799)
+    forward.tick(1000)
+    assert forward.pending is not None
+    assert forward.pending["message"]["stream"] != key
+
+
+def test_custom_source_kept_when_state_switches_and_bad_journal_is_isolated(config, tmp_path):
+    module = source_module("log_context")
+    c = settings(config, tmp_path)
+    run = module.RunLog.create(tmp_path / "linux", path=tmp_path / "custom")
+    module.append_manager_event(run.path / "manager.log", "完整错误\n" * 100, "error", 1)
+    journal = run.path / "manager.radio.events.jsonl"
+    state = Path(c["cli"]["state_file"])
+    state.write_text(json.dumps({"radio_log_events": str(journal)}), encoding="utf-8")
+    forward = CliForwarder(c, Outbox(c))
+    forward.tick(0)
+    key = stream_id(journal)
+    bad = tmp_path / "linux/wuta_logs/trackdrive/bad/manager.radio.events.jsonl"
+    bad.parent.mkdir(parents=True)
+    bad.write_bytes(b"broken journal retained")
+    state.write_text("{}", encoding="utf-8")
+    forward.scan()
+    assert forward.files[key] == journal
+    assert forward.backlog == journal.stat().st_size
+    assert "CLI journal unavailable" in forward.source_warning
+    assert bad.read_bytes() == b"broken journal retained"
+    acks = []
+    receiver = CliReceiver(tmp_path / "pc", lambda event: None, acks.append)
+    receiver.accept(forward.pending["message"])
+    forward.acknowledge(acks.pop())
+    assert forward.pending is None and forward.cursors[key] > 0
 
 
 def test_cli_sensor_capture_and_status_preserve_detail_and_times(config, tmp_path):

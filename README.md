@@ -13,6 +13,8 @@ ROS 2 Humble + RViz 的独立工作区，适用于已运行的 WUTA-FSD 算法�
 
 无线组件0.5.0转发CLI必要日志（错误/警告及诊断上下文、任务变化和启动/退出汇总）、CLI传感器状态与车辆摘要，具备PC落盘确认和日志断点续传；Linux原日志保留全文，需同步更新主项目的CLI子模块。布局新增“CLI 日志与传感器”，筛选规则、部署及带宽分配见[无线说明](radio_link/README.md)。
 
+2026年10月20日无线0.5.1适配新`wuta_logs/`日志布局，兼容旧目录；CLI切回会话或pending归档移动后，按stream ID重定位并继续磁盘确认与断点续传。配套CLI可选择算法、外部驱动、华测和CAN分类日志，并单列感知驱动进程检查。
+
 ## 独立仓库与主项目引用
 
 独立仓库：[starry1N/fsd-visualization-code](https://github.com/starry1N/fsd-visualization-code)（私有，克隆者需访问权限）。范围包含两个ROS包、显示配置与测试，以及可选E22/Foxglove组件；FSD消息包仍由原算法安装空间提供。
