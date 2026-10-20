@@ -1,9 +1,11 @@
 """Official SDK typed SceneUpdate channels; the PC does not require ROS."""
 
 from collections import deque
+from datetime import datetime
 import json
 import math
 import queue
+import re
 import threading
 import time
 import foxglove
@@ -12,7 +14,7 @@ from foxglove.channels import SceneUpdateChannel, LogChannel
 from foxglove.websocket import Capability, ServerListener
 from .geometry import multiply, rotate
 from .essentials import expanded_records, profile_tag, source_stamp
-from .cli_telemetry import expand_status
+from .cli_telemetry import SENSORS, expand_status
 
 TX_TOPIC = "/fsd_radio/extension/tx"
 
@@ -187,6 +189,7 @@ class FoxgloveView:
         self.cli_log_cache_bytes = 0
         self.cli_status_received = None
         self.cli_collector_stale = True
+        self.cli_sensor_snapshot = None
         self.cli_scope = None
         self.cli_run_state = None
         self.snapshots = {}
@@ -232,6 +235,7 @@ class FoxgloveView:
                 "cli/vehicle",
                 "cli/transfer",
                 "cli/health",
+                "cli/dashboard",
             )
         }
         self.cli_log_channel = LogChannel("/radio/cli/log", context=self.context)
@@ -330,6 +334,7 @@ class FoxgloveView:
                 self.cli_log_cache_bytes = 0
                 self.cli_status_received = None
                 self.cli_collector_stale = True
+                self.cli_sensor_snapshot = None
                 # Native Log panels otherwise retain the previous startup's rows.
                 self._reset_session(self.cli_scope)
                 for channel, value, stamp in list(self.replay.values()):
@@ -372,6 +377,7 @@ class FoxgloveView:
             stamp = source_stamp(message["t"])
             self.cli_status_received = received
             self.cli_collector_stale = value["collector_stale"]
+            self.cli_sensor_snapshot = value
             self.log(
                 "cli/sensors", {k: v for k, v in value.items() if k != "vehicle"}, stamp
             )
@@ -565,17 +571,17 @@ class FoxgloveView:
         cli_age = (
             None if self.cli_status_received is None else now - self.cli_status_received
         )
+        cli_stale = (self.cli_collector_stale or cli_age is None or cli_age
+                     > max(20, self.config.get("cli", {}).get("status_interval", 10) * 2))
         self.log(
             "cli/health",
             {
                 "received": cli_age is not None,
                 "receive_age_s": cli_age,
-                "stale": self.cli_collector_stale
-                or cli_age is None
-                or cli_age
-                > max(20, self.config.get("cli", {}).get("status_interval", 10) * 2),
+                "stale": cli_stale,
             },
         )
+        self.sensor_dashboard(cli_age, cli_stale)
         ages = {key: {"received": False, "stale": True} for key in self.channels}
         with self.lock:
             snapshots = list(self.snapshots.items())
@@ -612,6 +618,49 @@ class FoxgloveView:
                 "extension/status",
                 {"accepted": False, "error": self.listener.errors.get_nowait()},
             )
+
+    def sensor_dashboard(self, receive_age, stale):
+        """PC-only presentation fields for built-in Indicator and Table panels."""
+        value = self.cli_sensor_snapshot or {}
+        states, rows = {}, []
+        quality = -1
+        for name, key in zip(SENSORS, ("gnss", "ins", "lidar", "camera", "fusion")):
+            row = next((r for r in value.get("sensors", []) if r["name"] == name), {})
+            received = row.get("received", False)
+            state = (0 if not received else 3 if stale else
+                     1 if row.get("online_at_source", False) else 2)
+            states[key] = state
+            stamp = int(row.get("source_stamp_ns", 0))
+            clock = "未知"
+            if stamp > 0:
+                try:
+                    clock = (datetime.fromtimestamp(stamp // 10**9).astimezone().strftime("%H:%M:%S")
+                             + f".{stamp % 10**9 // 10**6:03d}")
+                except (OverflowError, OSError, ValueError):
+                    clock = "无效源时间"
+            detail = row.get("detail", "尚未收到")
+            if key == "gnss" and not stale:
+                match = re.search(r"状态码\s*=\s*(\d+)", detail)
+                if match:
+                    quality = int(match[1])
+            rows.append({
+                "设备": name,
+                "状态": ("未收到", "在线", "源端超时", "缓存已过期")[state],
+                "频率_Hz": row.get("hz"),
+                "采样时年龄_s": row.get("age_at_snapshot_s"),
+                "源时间_本机时区": clock,
+                "参数": detail,
+            })
+        source = value.get("source_stamp_ns", "0")
+        self.log("cli/dashboard", {
+            "source_stamp_ns": source,
+            "states": states,
+            "gnss_quality": quality,
+            "stale": stale,
+            "receive_age_s": receive_age,
+            "online_count": sum(state == 1 for state in states.values()),
+            "rows": rows,
+        }, int(source))
 
     def close(self):
         self.server.stop()

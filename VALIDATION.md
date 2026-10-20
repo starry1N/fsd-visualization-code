@@ -79,3 +79,7 @@ bash check-gui.sh --mode bridge
 ## 2026-10-20：启用最终规划路径（未执行验证）
 
 启用RViz模板Final planned path，路径无线配置改为1秒/权重3，维持4个Marker、每Marker48点与1200字节快照限制。既有配置用例期望同步改为native/bridge的实际路径话题。按用户指令未运行测试、构建、WSL或实机验证；不据此声称现场已有规划路径输出或达到1 Hz。
+
+## 2026-10-20：原生传感器面板实现记录
+
+使用原生Indicator/Gauge/Table，PC从既有CLI快照派生dashboard通道，保留源时间与原始诊断。核对组件配置字段依据已安装SDK layouts类型与官方文档；按用户此前要求未运行自动化测试、构建、WSL或Linux实机验证。默认布局不再依赖自定义扩展，未把自定义草稿作为交付。

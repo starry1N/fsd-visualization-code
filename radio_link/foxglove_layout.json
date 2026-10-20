@@ -159,7 +159,7 @@
           "title": "CLI 日志与传感器",
           "layout": {
             "direction": "row",
-            "splitPercentage": 60,
+            "splitPercentage": 50,
             "first": {
               "direction": "column",
               "splitPercentage": 80,
@@ -169,12 +169,304 @@
             "second": {
               "direction": "column",
               "splitPercentage": 60,
-              "first": "RawMessages!cliSensors",
+              "first": "Table!sensorParams",
+              "second": "Table!taskState"
+            }
+          }
+        },
+        {
+          "title": "传感器概览",
+          "layout": {
+            "direction": "column",
+            "splitPercentage": 18,
+            "first": {
+              "direction": "row",
+              "splitPercentage": 20.0,
+              "first": "Indicator!sensor_gnss",
+              "second": {
+                "direction": "row",
+                "splitPercentage": 25.0,
+                "first": "Indicator!sensor_ins",
+                "second": {
+                  "direction": "row",
+                  "splitPercentage": 33.33,
+                  "first": "Indicator!sensor_lidar",
+                  "second": {
+                    "direction": "row",
+                    "splitPercentage": 50.0,
+                    "first": "Indicator!sensor_camera",
+                    "second": "Indicator!sensor_fusion"
+                  }
+                }
+              }
+            },
+            "second": {
+              "direction": "column",
+              "splitPercentage": 25,
+              "first": {
+                "direction": "row",
+                "splitPercentage": 33.33,
+                "first": "Indicator!sensorFresh",
+                "second": {
+                  "direction": "row",
+                  "splitPercentage": 50.0,
+                  "first": "Indicator!gnssQuality",
+                  "second": "Gauge!sensorAge"
+                }
+              },
+              "second": "Table!sensorParams"
+            }
+          }
+        },
+        {
+          "title": "原始诊断",
+          "layout": {
+            "direction": "row",
+            "splitPercentage": 50,
+            "first": "RawMessages!cliSensors",
+            "second": {
+              "direction": "column",
+              "splitPercentage": 50,
+              "first": "RawMessages!cliTransfer",
               "second": "RawMessages!cliVehicle"
             }
           }
         }
       ]
+    },
+    "Indicator!sensor_gnss": {
+      "path": "/radio/cli/dashboard.states.gnss",
+      "style": "background",
+      "fontSize": 20,
+      "rules": [
+        {
+          "rawValue": "0",
+          "operator": "=",
+          "color": "#64748b",
+          "label": "未收到"
+        },
+        {
+          "rawValue": "1",
+          "operator": "=",
+          "color": "#22c55e",
+          "label": "在线"
+        },
+        {
+          "rawValue": "2",
+          "operator": "=",
+          "color": "#ef4444",
+          "label": "源端超时"
+        },
+        {
+          "rawValue": "3",
+          "operator": "=",
+          "color": "#f59e0b",
+          "label": "缓存已过期"
+        }
+      ],
+      "fallbackColor": "#64748b",
+      "fallbackLabel": "等待数据",
+      "foxglovePanelTitle": "GNSS 数据流"
+    },
+    "Indicator!sensor_ins": {
+      "path": "/radio/cli/dashboard.states.ins",
+      "style": "background",
+      "fontSize": 20,
+      "rules": [
+        {
+          "rawValue": "0",
+          "operator": "=",
+          "color": "#64748b",
+          "label": "未收到"
+        },
+        {
+          "rawValue": "1",
+          "operator": "=",
+          "color": "#22c55e",
+          "label": "在线"
+        },
+        {
+          "rawValue": "2",
+          "operator": "=",
+          "color": "#ef4444",
+          "label": "源端超时"
+        },
+        {
+          "rawValue": "3",
+          "operator": "=",
+          "color": "#f59e0b",
+          "label": "缓存已过期"
+        }
+      ],
+      "fallbackColor": "#64748b",
+      "fallbackLabel": "等待数据",
+      "foxglovePanelTitle": "惯导"
+    },
+    "Indicator!sensor_lidar": {
+      "path": "/radio/cli/dashboard.states.lidar",
+      "style": "background",
+      "fontSize": 20,
+      "rules": [
+        {
+          "rawValue": "0",
+          "operator": "=",
+          "color": "#64748b",
+          "label": "未收到"
+        },
+        {
+          "rawValue": "1",
+          "operator": "=",
+          "color": "#22c55e",
+          "label": "在线"
+        },
+        {
+          "rawValue": "2",
+          "operator": "=",
+          "color": "#ef4444",
+          "label": "源端超时"
+        },
+        {
+          "rawValue": "3",
+          "operator": "=",
+          "color": "#f59e0b",
+          "label": "缓存已过期"
+        }
+      ],
+      "fallbackColor": "#64748b",
+      "fallbackLabel": "等待数据",
+      "foxglovePanelTitle": "激光雷达"
+    },
+    "Indicator!sensor_camera": {
+      "path": "/radio/cli/dashboard.states.camera",
+      "style": "background",
+      "fontSize": 20,
+      "rules": [
+        {
+          "rawValue": "0",
+          "operator": "=",
+          "color": "#64748b",
+          "label": "未收到"
+        },
+        {
+          "rawValue": "1",
+          "operator": "=",
+          "color": "#22c55e",
+          "label": "在线"
+        },
+        {
+          "rawValue": "2",
+          "operator": "=",
+          "color": "#ef4444",
+          "label": "源端超时"
+        },
+        {
+          "rawValue": "3",
+          "operator": "=",
+          "color": "#f59e0b",
+          "label": "缓存已过期"
+        }
+      ],
+      "fallbackColor": "#64748b",
+      "fallbackLabel": "等待数据",
+      "foxglovePanelTitle": "相机"
+    },
+    "Indicator!sensor_fusion": {
+      "path": "/radio/cli/dashboard.states.fusion",
+      "style": "background",
+      "fontSize": 20,
+      "rules": [
+        {
+          "rawValue": "0",
+          "operator": "=",
+          "color": "#64748b",
+          "label": "未收到"
+        },
+        {
+          "rawValue": "1",
+          "operator": "=",
+          "color": "#22c55e",
+          "label": "在线"
+        },
+        {
+          "rawValue": "2",
+          "operator": "=",
+          "color": "#ef4444",
+          "label": "源端超时"
+        },
+        {
+          "rawValue": "3",
+          "operator": "=",
+          "color": "#f59e0b",
+          "label": "缓存已过期"
+        }
+      ],
+      "fallbackColor": "#64748b",
+      "fallbackLabel": "等待数据",
+      "foxglovePanelTitle": "融合"
+    },
+    "Indicator!sensorFresh": {
+      "path": "/radio/cli/dashboard.stale",
+      "style": "bulb",
+      "fontSize": 20,
+      "rules": [
+        {
+          "rawValue": "false",
+          "operator": "=",
+          "color": "#22c55e",
+          "label": "快照有效"
+        },
+        {
+          "rawValue": "true",
+          "operator": "=",
+          "color": "#f59e0b",
+          "label": "等待 / 缓存过期"
+        }
+      ],
+      "fallbackColor": "#64748b",
+      "fallbackLabel": "等待数据",
+      "foxglovePanelTitle": "数据新鲜度"
+    },
+    "Indicator!gnssQuality": {
+      "path": "/radio/cli/dashboard.gnss_quality",
+      "style": "bulb",
+      "fontSize": 20,
+      "rules": [
+        {
+          "rawValue": "4",
+          "operator": "=",
+          "color": "#22c55e",
+          "label": "状态 4 · RTK 固定解"
+        },
+        {
+          "rawValue": "-1",
+          "operator": "=",
+          "color": "#64748b",
+          "label": "未知 / 缓存过期"
+        }
+      ],
+      "fallbackColor": "#f59e0b",
+      "fallbackLabel": "非状态 4 · 详见参数表",
+      "foxglovePanelTitle": "GNSS 定位质量（与在线状态分开）"
+    },
+    "Gauge!sensorAge": {
+      "path": "/radio/cli/dashboard.receive_age_s",
+      "style": "dial",
+      "minValue": 0,
+      "maxValue": 20,
+      "tickInterval": 5,
+      "showTicks": true,
+      "colorMode": "colormap",
+      "colorMap": "red-yellow-green",
+      "reverse": true,
+      "foxglovePanelTitle": "快照接收年龄 (s)"
+    },
+    "Table!sensorParams": {
+      "topicPath": "/radio/cli/dashboard.rows",
+      "foxglovePanelTitle": "传感器参数 · 源端频率 / 采样年龄 / 源时间"
+    },
+    "Table!taskState": {
+      "topicPath": "/radio/cli/vehicle.rows",
+      "foxglovePanelTitle": "车辆与任务状态"
     }
   },
   "layout": "Tab!radioMonitor",
