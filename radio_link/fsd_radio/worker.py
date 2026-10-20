@@ -4,6 +4,7 @@ import logging
 import threading
 from .link import Endpoint, Outbox
 from .transport import SerialTransport
+from .protocol import SLAVE
 
 LOG = logging.getLogger(__name__)
 
@@ -13,6 +14,8 @@ class RadioWorker:
         self.role, self.port, self.config = role, port, config
         self.on_message, self.on_peer = on_message, on_peer
         self.outbox = Outbox(config)
+        self.append_rssi = config['serial'].get(
+            'append_rssi_pc' if role == SLAVE else 'append_rssi_linux', False)
         self.endpoint = None
         self.error = None
         self.stop_event = threading.Event()
@@ -25,7 +28,8 @@ class RadioWorker:
         while not self.stop_event.is_set():
             transport = None
             try:
-                transport = SerialTransport(self.port, self.config["serial"]["baud"])
+                transport = SerialTransport(self.port, self.config["serial"]["baud"],
+                                            append_rssi=self.append_rssi)
                 endpoint = Endpoint(
                     self.role, transport, self.config, self.on_message, self.on_peer
                 )
@@ -54,11 +58,19 @@ class RadioWorker:
             self.stop_event.wait(1)
 
     def status(self):
+        endpoint = self.endpoint
+        rssi = (endpoint.transport.rssi_status(self.config['foxglove']['stale_seconds'])
+                if endpoint else {'enabled': self.append_rssi, 'valid': False, 'raw': None,
+                                  'display_raw': -4, 'captured_at_unix_ns': None,
+                                  'age_s': None, 'samples': 0,
+                                  'packet_session': None, 'packet_seq': None,
+                                  'clock_domain': 'unix', 'time_origin': 'local_uart_capture'})
         return {
-            "connected": self.endpoint is not None,
+            "connected": endpoint is not None,
             "port": self.port,
             "error": self.error,
-            **(self.endpoint.status() if self.endpoint else {}),
+            **(endpoint.status() if endpoint else {}),
+            'rssi': rssi,
         }
 
     def close(self):

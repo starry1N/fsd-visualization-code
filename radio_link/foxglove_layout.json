@@ -190,7 +190,12 @@
                   "direction": "row"
                 },
                 "direction": "column",
-                "second": "Table!taskState",
+                "second": {
+                  "second": "Indicator!radioRssi",
+                  "splitPercentage": 78,
+                  "first": "Table!taskState",
+                  "direction": "column"
+                },
                 "splitPercentage": 17
               },
               "splitPercentage": 16
@@ -662,6 +667,1576 @@
           "rawValue": "清理未完成；请 p 认证后重试 x / q"
         }
       ]
+    },
+    "Indicator!radioRssi": {
+      "style": "background",
+      "foxglovePanelTitle": "无线 RSSI · Linux → Windows · 原始值（非 dBm）",
+      "fallbackColor": "#64748b",
+      "fallbackLabel": "等待 RSSI 数据",
+      "path": "/radio/link.rssi.display_raw",
+      "rules": [
+        {
+          "rawValue": "-1",
+          "label": "等待 RSSI 数据",
+          "color": "#64748b",
+          "operator": "="
+        },
+        {
+          "rawValue": "-2",
+          "label": "RSSI 解析未开启",
+          "color": "#64748b",
+          "operator": "="
+        },
+        {
+          "rawValue": "-3",
+          "label": "RSSI 已过期",
+          "color": "#f59e0b",
+          "operator": "="
+        },
+        {
+          "rawValue": "-4",
+          "label": "接收端已断开",
+          "color": "#64748b",
+          "operator": "="
+        },
+        {
+          "rawValue": "0",
+          "label": "RSSI RAW 0 · 0x00",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "1",
+          "label": "RSSI RAW 1 · 0x01",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "2",
+          "label": "RSSI RAW 2 · 0x02",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "3",
+          "label": "RSSI RAW 3 · 0x03",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "4",
+          "label": "RSSI RAW 4 · 0x04",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "5",
+          "label": "RSSI RAW 5 · 0x05",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "6",
+          "label": "RSSI RAW 6 · 0x06",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "7",
+          "label": "RSSI RAW 7 · 0x07",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "8",
+          "label": "RSSI RAW 8 · 0x08",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "9",
+          "label": "RSSI RAW 9 · 0x09",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "10",
+          "label": "RSSI RAW 10 · 0x0A",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "11",
+          "label": "RSSI RAW 11 · 0x0B",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "12",
+          "label": "RSSI RAW 12 · 0x0C",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "13",
+          "label": "RSSI RAW 13 · 0x0D",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "14",
+          "label": "RSSI RAW 14 · 0x0E",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "15",
+          "label": "RSSI RAW 15 · 0x0F",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "16",
+          "label": "RSSI RAW 16 · 0x10",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "17",
+          "label": "RSSI RAW 17 · 0x11",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "18",
+          "label": "RSSI RAW 18 · 0x12",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "19",
+          "label": "RSSI RAW 19 · 0x13",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "20",
+          "label": "RSSI RAW 20 · 0x14",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "21",
+          "label": "RSSI RAW 21 · 0x15",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "22",
+          "label": "RSSI RAW 22 · 0x16",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "23",
+          "label": "RSSI RAW 23 · 0x17",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "24",
+          "label": "RSSI RAW 24 · 0x18",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "25",
+          "label": "RSSI RAW 25 · 0x19",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "26",
+          "label": "RSSI RAW 26 · 0x1A",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "27",
+          "label": "RSSI RAW 27 · 0x1B",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "28",
+          "label": "RSSI RAW 28 · 0x1C",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "29",
+          "label": "RSSI RAW 29 · 0x1D",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "30",
+          "label": "RSSI RAW 30 · 0x1E",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "31",
+          "label": "RSSI RAW 31 · 0x1F",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "32",
+          "label": "RSSI RAW 32 · 0x20",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "33",
+          "label": "RSSI RAW 33 · 0x21",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "34",
+          "label": "RSSI RAW 34 · 0x22",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "35",
+          "label": "RSSI RAW 35 · 0x23",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "36",
+          "label": "RSSI RAW 36 · 0x24",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "37",
+          "label": "RSSI RAW 37 · 0x25",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "38",
+          "label": "RSSI RAW 38 · 0x26",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "39",
+          "label": "RSSI RAW 39 · 0x27",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "40",
+          "label": "RSSI RAW 40 · 0x28",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "41",
+          "label": "RSSI RAW 41 · 0x29",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "42",
+          "label": "RSSI RAW 42 · 0x2A",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "43",
+          "label": "RSSI RAW 43 · 0x2B",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "44",
+          "label": "RSSI RAW 44 · 0x2C",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "45",
+          "label": "RSSI RAW 45 · 0x2D",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "46",
+          "label": "RSSI RAW 46 · 0x2E",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "47",
+          "label": "RSSI RAW 47 · 0x2F",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "48",
+          "label": "RSSI RAW 48 · 0x30",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "49",
+          "label": "RSSI RAW 49 · 0x31",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "50",
+          "label": "RSSI RAW 50 · 0x32",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "51",
+          "label": "RSSI RAW 51 · 0x33",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "52",
+          "label": "RSSI RAW 52 · 0x34",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "53",
+          "label": "RSSI RAW 53 · 0x35",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "54",
+          "label": "RSSI RAW 54 · 0x36",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "55",
+          "label": "RSSI RAW 55 · 0x37",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "56",
+          "label": "RSSI RAW 56 · 0x38",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "57",
+          "label": "RSSI RAW 57 · 0x39",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "58",
+          "label": "RSSI RAW 58 · 0x3A",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "59",
+          "label": "RSSI RAW 59 · 0x3B",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "60",
+          "label": "RSSI RAW 60 · 0x3C",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "61",
+          "label": "RSSI RAW 61 · 0x3D",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "62",
+          "label": "RSSI RAW 62 · 0x3E",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "63",
+          "label": "RSSI RAW 63 · 0x3F",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "64",
+          "label": "RSSI RAW 64 · 0x40",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "65",
+          "label": "RSSI RAW 65 · 0x41",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "66",
+          "label": "RSSI RAW 66 · 0x42",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "67",
+          "label": "RSSI RAW 67 · 0x43",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "68",
+          "label": "RSSI RAW 68 · 0x44",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "69",
+          "label": "RSSI RAW 69 · 0x45",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "70",
+          "label": "RSSI RAW 70 · 0x46",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "71",
+          "label": "RSSI RAW 71 · 0x47",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "72",
+          "label": "RSSI RAW 72 · 0x48",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "73",
+          "label": "RSSI RAW 73 · 0x49",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "74",
+          "label": "RSSI RAW 74 · 0x4A",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "75",
+          "label": "RSSI RAW 75 · 0x4B",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "76",
+          "label": "RSSI RAW 76 · 0x4C",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "77",
+          "label": "RSSI RAW 77 · 0x4D",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "78",
+          "label": "RSSI RAW 78 · 0x4E",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "79",
+          "label": "RSSI RAW 79 · 0x4F",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "80",
+          "label": "RSSI RAW 80 · 0x50",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "81",
+          "label": "RSSI RAW 81 · 0x51",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "82",
+          "label": "RSSI RAW 82 · 0x52",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "83",
+          "label": "RSSI RAW 83 · 0x53",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "84",
+          "label": "RSSI RAW 84 · 0x54",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "85",
+          "label": "RSSI RAW 85 · 0x55",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "86",
+          "label": "RSSI RAW 86 · 0x56",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "87",
+          "label": "RSSI RAW 87 · 0x57",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "88",
+          "label": "RSSI RAW 88 · 0x58",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "89",
+          "label": "RSSI RAW 89 · 0x59",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "90",
+          "label": "RSSI RAW 90 · 0x5A",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "91",
+          "label": "RSSI RAW 91 · 0x5B",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "92",
+          "label": "RSSI RAW 92 · 0x5C",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "93",
+          "label": "RSSI RAW 93 · 0x5D",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "94",
+          "label": "RSSI RAW 94 · 0x5E",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "95",
+          "label": "RSSI RAW 95 · 0x5F",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "96",
+          "label": "RSSI RAW 96 · 0x60",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "97",
+          "label": "RSSI RAW 97 · 0x61",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "98",
+          "label": "RSSI RAW 98 · 0x62",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "99",
+          "label": "RSSI RAW 99 · 0x63",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "100",
+          "label": "RSSI RAW 100 · 0x64",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "101",
+          "label": "RSSI RAW 101 · 0x65",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "102",
+          "label": "RSSI RAW 102 · 0x66",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "103",
+          "label": "RSSI RAW 103 · 0x67",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "104",
+          "label": "RSSI RAW 104 · 0x68",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "105",
+          "label": "RSSI RAW 105 · 0x69",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "106",
+          "label": "RSSI RAW 106 · 0x6A",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "107",
+          "label": "RSSI RAW 107 · 0x6B",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "108",
+          "label": "RSSI RAW 108 · 0x6C",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "109",
+          "label": "RSSI RAW 109 · 0x6D",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "110",
+          "label": "RSSI RAW 110 · 0x6E",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "111",
+          "label": "RSSI RAW 111 · 0x6F",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "112",
+          "label": "RSSI RAW 112 · 0x70",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "113",
+          "label": "RSSI RAW 113 · 0x71",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "114",
+          "label": "RSSI RAW 114 · 0x72",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "115",
+          "label": "RSSI RAW 115 · 0x73",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "116",
+          "label": "RSSI RAW 116 · 0x74",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "117",
+          "label": "RSSI RAW 117 · 0x75",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "118",
+          "label": "RSSI RAW 118 · 0x76",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "119",
+          "label": "RSSI RAW 119 · 0x77",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "120",
+          "label": "RSSI RAW 120 · 0x78",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "121",
+          "label": "RSSI RAW 121 · 0x79",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "122",
+          "label": "RSSI RAW 122 · 0x7A",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "123",
+          "label": "RSSI RAW 123 · 0x7B",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "124",
+          "label": "RSSI RAW 124 · 0x7C",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "125",
+          "label": "RSSI RAW 125 · 0x7D",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "126",
+          "label": "RSSI RAW 126 · 0x7E",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "127",
+          "label": "RSSI RAW 127 · 0x7F",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "128",
+          "label": "RSSI RAW 128 · 0x80",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "129",
+          "label": "RSSI RAW 129 · 0x81",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "130",
+          "label": "RSSI RAW 130 · 0x82",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "131",
+          "label": "RSSI RAW 131 · 0x83",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "132",
+          "label": "RSSI RAW 132 · 0x84",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "133",
+          "label": "RSSI RAW 133 · 0x85",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "134",
+          "label": "RSSI RAW 134 · 0x86",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "135",
+          "label": "RSSI RAW 135 · 0x87",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "136",
+          "label": "RSSI RAW 136 · 0x88",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "137",
+          "label": "RSSI RAW 137 · 0x89",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "138",
+          "label": "RSSI RAW 138 · 0x8A",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "139",
+          "label": "RSSI RAW 139 · 0x8B",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "140",
+          "label": "RSSI RAW 140 · 0x8C",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "141",
+          "label": "RSSI RAW 141 · 0x8D",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "142",
+          "label": "RSSI RAW 142 · 0x8E",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "143",
+          "label": "RSSI RAW 143 · 0x8F",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "144",
+          "label": "RSSI RAW 144 · 0x90",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "145",
+          "label": "RSSI RAW 145 · 0x91",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "146",
+          "label": "RSSI RAW 146 · 0x92",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "147",
+          "label": "RSSI RAW 147 · 0x93",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "148",
+          "label": "RSSI RAW 148 · 0x94",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "149",
+          "label": "RSSI RAW 149 · 0x95",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "150",
+          "label": "RSSI RAW 150 · 0x96",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "151",
+          "label": "RSSI RAW 151 · 0x97",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "152",
+          "label": "RSSI RAW 152 · 0x98",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "153",
+          "label": "RSSI RAW 153 · 0x99",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "154",
+          "label": "RSSI RAW 154 · 0x9A",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "155",
+          "label": "RSSI RAW 155 · 0x9B",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "156",
+          "label": "RSSI RAW 156 · 0x9C",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "157",
+          "label": "RSSI RAW 157 · 0x9D",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "158",
+          "label": "RSSI RAW 158 · 0x9E",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "159",
+          "label": "RSSI RAW 159 · 0x9F",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "160",
+          "label": "RSSI RAW 160 · 0xA0",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "161",
+          "label": "RSSI RAW 161 · 0xA1",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "162",
+          "label": "RSSI RAW 162 · 0xA2",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "163",
+          "label": "RSSI RAW 163 · 0xA3",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "164",
+          "label": "RSSI RAW 164 · 0xA4",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "165",
+          "label": "RSSI RAW 165 · 0xA5",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "166",
+          "label": "RSSI RAW 166 · 0xA6",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "167",
+          "label": "RSSI RAW 167 · 0xA7",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "168",
+          "label": "RSSI RAW 168 · 0xA8",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "169",
+          "label": "RSSI RAW 169 · 0xA9",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "170",
+          "label": "RSSI RAW 170 · 0xAA",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "171",
+          "label": "RSSI RAW 171 · 0xAB",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "172",
+          "label": "RSSI RAW 172 · 0xAC",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "173",
+          "label": "RSSI RAW 173 · 0xAD",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "174",
+          "label": "RSSI RAW 174 · 0xAE",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "175",
+          "label": "RSSI RAW 175 · 0xAF",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "176",
+          "label": "RSSI RAW 176 · 0xB0",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "177",
+          "label": "RSSI RAW 177 · 0xB1",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "178",
+          "label": "RSSI RAW 178 · 0xB2",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "179",
+          "label": "RSSI RAW 179 · 0xB3",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "180",
+          "label": "RSSI RAW 180 · 0xB4",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "181",
+          "label": "RSSI RAW 181 · 0xB5",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "182",
+          "label": "RSSI RAW 182 · 0xB6",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "183",
+          "label": "RSSI RAW 183 · 0xB7",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "184",
+          "label": "RSSI RAW 184 · 0xB8",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "185",
+          "label": "RSSI RAW 185 · 0xB9",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "186",
+          "label": "RSSI RAW 186 · 0xBA",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "187",
+          "label": "RSSI RAW 187 · 0xBB",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "188",
+          "label": "RSSI RAW 188 · 0xBC",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "189",
+          "label": "RSSI RAW 189 · 0xBD",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "190",
+          "label": "RSSI RAW 190 · 0xBE",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "191",
+          "label": "RSSI RAW 191 · 0xBF",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "192",
+          "label": "RSSI RAW 192 · 0xC0",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "193",
+          "label": "RSSI RAW 193 · 0xC1",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "194",
+          "label": "RSSI RAW 194 · 0xC2",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "195",
+          "label": "RSSI RAW 195 · 0xC3",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "196",
+          "label": "RSSI RAW 196 · 0xC4",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "197",
+          "label": "RSSI RAW 197 · 0xC5",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "198",
+          "label": "RSSI RAW 198 · 0xC6",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "199",
+          "label": "RSSI RAW 199 · 0xC7",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "200",
+          "label": "RSSI RAW 200 · 0xC8",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "201",
+          "label": "RSSI RAW 201 · 0xC9",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "202",
+          "label": "RSSI RAW 202 · 0xCA",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "203",
+          "label": "RSSI RAW 203 · 0xCB",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "204",
+          "label": "RSSI RAW 204 · 0xCC",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "205",
+          "label": "RSSI RAW 205 · 0xCD",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "206",
+          "label": "RSSI RAW 206 · 0xCE",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "207",
+          "label": "RSSI RAW 207 · 0xCF",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "208",
+          "label": "RSSI RAW 208 · 0xD0",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "209",
+          "label": "RSSI RAW 209 · 0xD1",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "210",
+          "label": "RSSI RAW 210 · 0xD2",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "211",
+          "label": "RSSI RAW 211 · 0xD3",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "212",
+          "label": "RSSI RAW 212 · 0xD4",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "213",
+          "label": "RSSI RAW 213 · 0xD5",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "214",
+          "label": "RSSI RAW 214 · 0xD6",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "215",
+          "label": "RSSI RAW 215 · 0xD7",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "216",
+          "label": "RSSI RAW 216 · 0xD8",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "217",
+          "label": "RSSI RAW 217 · 0xD9",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "218",
+          "label": "RSSI RAW 218 · 0xDA",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "219",
+          "label": "RSSI RAW 219 · 0xDB",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "220",
+          "label": "RSSI RAW 220 · 0xDC",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "221",
+          "label": "RSSI RAW 221 · 0xDD",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "222",
+          "label": "RSSI RAW 222 · 0xDE",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "223",
+          "label": "RSSI RAW 223 · 0xDF",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "224",
+          "label": "RSSI RAW 224 · 0xE0",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "225",
+          "label": "RSSI RAW 225 · 0xE1",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "226",
+          "label": "RSSI RAW 226 · 0xE2",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "227",
+          "label": "RSSI RAW 227 · 0xE3",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "228",
+          "label": "RSSI RAW 228 · 0xE4",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "229",
+          "label": "RSSI RAW 229 · 0xE5",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "230",
+          "label": "RSSI RAW 230 · 0xE6",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "231",
+          "label": "RSSI RAW 231 · 0xE7",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "232",
+          "label": "RSSI RAW 232 · 0xE8",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "233",
+          "label": "RSSI RAW 233 · 0xE9",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "234",
+          "label": "RSSI RAW 234 · 0xEA",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "235",
+          "label": "RSSI RAW 235 · 0xEB",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "236",
+          "label": "RSSI RAW 236 · 0xEC",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "237",
+          "label": "RSSI RAW 237 · 0xED",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "238",
+          "label": "RSSI RAW 238 · 0xEE",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "239",
+          "label": "RSSI RAW 239 · 0xEF",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "240",
+          "label": "RSSI RAW 240 · 0xF0",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "241",
+          "label": "RSSI RAW 241 · 0xF1",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "242",
+          "label": "RSSI RAW 242 · 0xF2",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "243",
+          "label": "RSSI RAW 243 · 0xF3",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "244",
+          "label": "RSSI RAW 244 · 0xF4",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "245",
+          "label": "RSSI RAW 245 · 0xF5",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "246",
+          "label": "RSSI RAW 246 · 0xF6",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "247",
+          "label": "RSSI RAW 247 · 0xF7",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "248",
+          "label": "RSSI RAW 248 · 0xF8",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "249",
+          "label": "RSSI RAW 249 · 0xF9",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "250",
+          "label": "RSSI RAW 250 · 0xFA",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "251",
+          "label": "RSSI RAW 251 · 0xFB",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "252",
+          "label": "RSSI RAW 252 · 0xFC",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "253",
+          "label": "RSSI RAW 253 · 0xFD",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "254",
+          "label": "RSSI RAW 254 · 0xFE",
+          "color": "#3b82f6",
+          "operator": "="
+        },
+        {
+          "rawValue": "255",
+          "label": "RSSI RAW 255 · 0xFF",
+          "color": "#3b82f6",
+          "operator": "="
+        }
+      ],
+      "fontSize": 22
     }
   },
   "layout": "Tab!radioMonitor",

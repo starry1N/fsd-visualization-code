@@ -120,6 +120,16 @@ def validate(config):
     ):
         positive(link[name], name)
     baud = config["serial"]["baud"]
+    for key in ('append_rssi_pc', 'append_rssi_linux'):
+        if type(config['serial'].get(key, False)) is not bool:
+            raise ValueError(f'serial.{key} must be boolean')
+    module_packet = config['serial'].get('module_packet_bytes', 240)
+    if type(module_packet) is not int or module_packet not in (32, 64, 128, 240):
+        raise ValueError('serial.module_packet_bytes must be 32, 64, 128 or 240')
+    rssi_enabled = any(config['serial'].get(key, False)
+                       for key in ('append_rssi_pc', 'append_rssi_linux'))
+    if rssi_enabled and module_packet != 240:
+        raise ValueError('Appended RSSI parsing requires the E22 module packet setting to be 240 bytes')
     air_rate = link.get("air_rate_bps", 2400)
     if not isinstance(baud, int) or baud <= 0 or not isinstance(air_rate, int) or air_rate <= 0:
         raise ValueError("serial.baud and link.air_rate_bps must be positive integers")

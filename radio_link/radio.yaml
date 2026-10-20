@@ -7,6 +7,9 @@ serial:
   pc_port: COM3
   linux_port: /dev/serial/by-id/usb-1a86_USB_Serial-if00-port0  # E22 CH340; single matching adapter.
   baud: 115200  # UART 8N1; both E22 modules must use 62.5 kbps air rate.
+  module_packet_bytes: 240  # Record the actual module setting; not programmed by this app.
+  append_rssi_pc: true  # PC module data-RSSI enabled by the user; consume one trailing byte.
+  append_rssi_linux: false  # Enable only if the Linux-side module also appends RSSI.
 link:
   air_rate_bps: 62500  # Module setting, recorded here for budget validation; not programmed by this app.
   bytes_per_second: 3000  # Aggregate UART bytes, BOTH directions, framing and retries included.

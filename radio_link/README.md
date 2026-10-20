@@ -480,3 +480,17 @@ CLI状态Indicator和检查/启动/停止/状态查询按钮移到“CLI 日志�
 ### 0.7.3：CLI操作中状态
 
 CLI状态Indicator新增橙色“操作中”：在线CLI有活动管理请求，或本机的检查/启动/停止/状态查询/配置保存指令排队、等待最终结果时显示。完成或超时后恢复心跳phase，离线优先显示离线；参数目录/文件自动读取不触发操作中。PC /radio/cli/control增加busy显示元数据，不改变CLI真实phase、无线格式或带宽。需加载新版Windows接收端并重新导入布局，Linux无需为此变更升级；未运行测试或实车操作。
+
+## 0.7.4：数据包尾RSSI与本机指示器
+
+“CLI 日志与控制”右侧vehicle.rows表格下方新增原生RSSI背景Indicator，消费 `/radio/link.rssi.display_raw`。显示接收端测得的Linux→Windows信号原始字节，例如 `RSSI RAW 160 · 0xA0`；有效样本统一蓝色，不用未经确认的阈值区分强弱。等待、未开启解析、过期和接收端断开分别提示。样本默认10秒过期（沿用foxglove.stale_seconds），不把旧值或0当作当前强度。
+
+用户已开启Windows模块的数据RSSI，因此本版radio.yaml的serial.append_rssi_pc=true；serial.append_rssi_linux=false，只有Linux模块也开启数据RSSI时才改true。软件开关必须与对应接收模块REG3.bit7一致；本程序不改写模块寄存器。关闭模块附加RSSI时务必同步关闭对应软件开关，不能自动猜测某个字节是RSSI还是下一帧。Windows读取的是Linux→Windows信号；Linux本地接收RSSI没有在本版额外转发回Windows。
+
+解析部署前提：两端模块分包为240字节（serial.module_packet_bytes记录此设置），一条应用无线帧对应一个模块无线包。当前最大应用帧226字节，固定停止等待/单帧写入；RSSI在帧尾换行之后追加。Framer先通过原帧CRC，再把紧随的一个字节作为RSSI，解析状态跨串口read保留，支持拆分/合并读取，RSSI值等于换行0x0A或起始符0x7E时也按数据消费。原帧立即交给ACK流程，不为等待尾字节阻塞业务确认。该功能不适用于模块将应用帧拆成多个无线包、合并多个应用帧再只附一个RSSI、或透传其他未采用本应用帧协议的数据。开启解析却配置32/64/128字节分包会拒绝启动；此软件记录不等于已读回核验真实硬件分包。
+
+手册E22-xxxT22Useries_UserManual_CN_v1.1印刷第13页说明REG3.bit7开启后追加一个RSSI字节；环境噪声处给出的-RSSI/2没有单独明确包尾数据RSSI换算。本版保留unsigned 0..255原始值，不套用其他型号的dBm公式或“优/良/差”阈值。Indicator使用固定字节值标签及错误状态规则，不需要自定义扩展；原生组件字段见[Foxglove Indicator说明](https://docs.foxglove.dev/docs/visualization/panels/indicator)。
+
+/radio/link.rssi字段：enabled、valid、raw、display_raw、age_s、captured_at_unix_ns、clock_domain=unix、time_origin=local_uart_capture、samples、packet_session、packet_seq。display_raw为有效原始值或-1等待/-2关闭/-3过期/-4断开；raw保留最近样本供诊断，过期时不继续作为有效值显示。时间来自本机读到尾字节的Unix纳秒采集时刻，不能冒充模块硬件时间或Linux ROS源时间。samples包含通过应用帧CRC的接收包/重传包，非业务消息计数。
+
+此为模块生成的接收端串口附加元数据，不增加应用无线消息；USB串口RX计数会包含附加字节。按要求未运行测试、WSL、构建或实机验证，尚未核验硬件追加粒度/换算；新增test_rssi.py覆盖全部256个字节、逐字节拆分、粘包、关闭解析及过期行为，未执行。接收程序按用户要求保持关闭，不自动占用COM3。完成模块设置后启动接收端并重新导入布局。

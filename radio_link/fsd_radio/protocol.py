@@ -80,13 +80,28 @@ class Packet:
 
 
 class Framer:
-    def __init__(self):
+    def __init__(self, *, append_rssi=False):
         self.buffer = bytearray()
         self.errors = 0
+        self.append_rssi = append_rssi
+        self.rssi_packet = None
+        self.last_rssi = None
 
     def feed(self, data):
         result = []
         for byte in data:
+            if self.rssi_packet is not None:
+                # Consume before interpreting '~' or newline: both are legal RSSI bytes.
+                # Requires one application frame per E22 packet (240-byte module setting).
+                packet = self.rssi_packet
+                self.last_rssi = {
+                    'raw': byte, 'captured_at_unix_ns': str(time.time_ns()),
+                    'received_monotonic': time.monotonic(),
+                    'packet_session': packet.session, 'packet_seq': packet.seq,
+                    'samples': (self.last_rssi or {}).get('samples', 0) + 1,
+                }
+                self.rssi_packet = None
+                continue
             if byte == ord("~"):
                 self.buffer[:] = b"~"
             elif self.buffer:
@@ -96,7 +111,10 @@ class Framer:
                     self.errors += 1
                 elif byte == 10:
                     try:
-                        result.append(Packet.decode(bytes(self.buffer)))
+                        packet = Packet.decode(bytes(self.buffer))
+                        result.append(packet)
+                        if self.append_rssi:
+                            self.rssi_packet = packet
                     except ValueError:
                         self.errors += 1
                     self.buffer.clear()
