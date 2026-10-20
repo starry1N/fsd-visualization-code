@@ -345,6 +345,9 @@ class PcControl:
                 stamp = int(self.heartbeat.get('t') or 0)
                 status = {
                     **self.heartbeat, 'online': online, 'status': self.cache.get('meta/status'),
+                    'display_state': ('等待CLI状态' if not self.heartbeat else
+                                      '离线' if not online else
+                                      str(self.heartbeat.get('phase') or '未知状态')),
                     'dirty_count': self.cache.get('meta/dirty_count', 0),
                     'pending': [{'id': k, 'op': v['op']} for k, v in self.pending.items()],
                     'result': self.last_result,
