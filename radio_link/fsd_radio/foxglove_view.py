@@ -222,7 +222,7 @@ class FoxgloveView:
         self.buffer_seconds = config["foxglove"].get("alignment_buffer_seconds", 3.0)
         self.lock = threading.RLock()
         self.server = foxglove.start_server(
-            name="FSD E22 2.4kbps",
+            name="FSD E22",
             host=config["foxglove"]["host"],
             port=config["foxglove"]["port"],
             context=self.context,

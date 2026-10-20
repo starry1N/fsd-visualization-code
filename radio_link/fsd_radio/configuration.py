@@ -119,7 +119,7 @@ def validate(config):
         positive(link[name], name)
     if link["bytes_per_second"] > 240:
         raise ValueError(
-            "2.4kbps profile allows <=240 UART bytes/s aggregate; default is 160"
+            "Conservative pacing profile allows <=240 UART bytes/s aggregate; default is 160"
         )
     if (
         not isinstance(link["fragment_bytes"], int)
@@ -134,7 +134,7 @@ def validate(config):
     if link["max_message_bytes"] > 4096:
         raise ValueError("max_message_bytes cannot exceed 4096")
     if link["response_timeout"] < 2.0:
-        raise ValueError("response_timeout must be >=2 seconds for the 2.4kbps profile")
+        raise ValueError("response_timeout must be >=2 seconds for the conservative pacing profile")
     positive(config["geometry"]["quantization_m"], "quantization_m")
     positive(config["foxglove"]["stale_seconds"], "stale_seconds")
     for name in ("cache_markers", "snapshot_bytes"):

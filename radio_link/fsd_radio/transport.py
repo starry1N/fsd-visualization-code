@@ -6,7 +6,7 @@ from .protocol import Framer
 
 
 class SerialTransport:
-    def __init__(self, port, baud=9600):
+    def __init__(self, port, baud=115200):
         if not port:
             raise ValueError(
                 "Linux radio port is required; use --port /dev/serial/by-id/..."
