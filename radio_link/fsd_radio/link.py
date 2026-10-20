@@ -54,7 +54,7 @@ class Outbox:
             self.latest[key] = packed
 
     def update_aux(self, key, message, interval=0.1, weight=1, one_shot=False):
-        if key not in ("cli_log", "cli_ack", "cli_status", "cli_run"):
+        if key not in ("cli_log", "cli_ack", "cli_status", "cli_run", "cli_control"):
             raise ValueError("unknown auxiliary telemetry")
         with self.lock:
             self.aux[key] = {

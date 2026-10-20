@@ -146,11 +146,26 @@ def entity_from_record(record, frame, step, now_ns, lifetime, source_stamp):
 
 
 class PublishListener(ServerListener):
-    def __init__(self, enqueue):
+    def __init__(self, enqueue, control=None):
         self.enqueue = enqueue
+        self.control = control
         self.channels = {}
         self.errors = queue.Queue(maxsize=32)
         self.subscriptions = queue.Queue(maxsize=128)
+
+    def on_get_parameters(self, client, param_names, request_id=None):
+        return self.control.parameters(param_names) if self.control else []
+
+    def on_set_parameters(self, client, parameters, request_id=None):
+        return self.control.set_parameters(parameters) if self.control else []
+
+    def on_parameters_subscribe(self, param_names):
+        if self.control:
+            with self.control.lock:
+                self.control.changed = True
+
+    def on_parameters_unsubscribe(self, param_names):
+        pass
 
     def on_subscribe(self, client, channel):
         try:
@@ -180,10 +195,10 @@ class PublishListener(ServerListener):
 
 
 class FoxgloveView:
-    def __init__(self, config, enqueue):
+    def __init__(self, config, enqueue, control=None):
         self.config = config
         self.context = foxglove.Context()
-        self.listener = PublishListener(enqueue)
+        self.listener = PublishListener(enqueue, control)
         self._create_channels()
         self.cli_log_cache = deque()
         self.cli_log_cache_bytes = 0
@@ -212,7 +227,7 @@ class FoxgloveView:
             host=config["foxglove"]["host"],
             port=config["foxglove"]["port"],
             context=self.context,
-            capabilities=[Capability.ClientPublish],
+            capabilities=[Capability.ClientPublish, Capability.Parameters] if control else [Capability.ClientPublish],
             supported_encodings=["json"],
             server_listener=self.listener,
         )
@@ -236,15 +251,21 @@ class FoxgloveView:
                 "cli/transfer",
                 "cli/health",
                 "cli/dashboard",
+                "cli/control",
             )
         }
         self.cli_log_channel = LogChannel("/radio/cli/log", context=self.context)
+        # Advertise the outgoing JSON type so native Publish buttons can select it.
+        self.command_channel = foxglove.Channel(TX_TOPIC, context=self.context, schema={
+            'title': 'fsd_radio.CliCommand', 'type': 'object',
+            'properties': {'type': {'type': 'string'}, 'action': {'type': 'string'}},
+            'additionalProperties': True})
 
     def _reset_session(self, scope):
         # A new serverInfo session clears Foxglove's topic registry as well as history.
         # Existing SDK channels are not automatically advertised again by clear_session.
         self.server.clear_session('fsd-run-' + scope)
-        for channel in (*self.channels.values(), *self.json_channels.values(), self.cli_log_channel):
+        for channel in (*self.channels.values(), *self.json_channels.values(), self.cli_log_channel, self.command_channel):
             channel.close()
         self._create_channels()
         # Replay must reference the newly advertised channels, never closed handles.

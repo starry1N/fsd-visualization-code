@@ -87,3 +87,7 @@ bash check-gui.sh --mode bridge
 ## 2026-10-20：原生面板样式与目录整理
 
 新鲜度/GNSS质量改为background，快照接收年龄改为bar；样式取值依据已安装SDK布局定义。整理本机交付目录，仅保留开发文档md/pdf、当前布局JSON及源码ZIP；45个旧布局、截图、临时补丁和脚本可恢复归档，空扩展草稿目录也移出源码目录。未运行自动化测试或实机验证，未停止当前COM3接收进程。
+
+## 2026-10-20：0.7.0 CLI统一操作与Parameters（未运行）
+
+增加有界JSON分块RPC、CLI文件邮箱适配、独立CLI心跳、PC参数/草稿缓存、原生Parameters和Publish操作布局。人工按已安装foxglove-sdk 0.29.2的websocket/Parameter/layouts类型核对调用字段，阅读请求ID去重、boot/run隔离、超时、文件版本冲突与事务处理；未运行自动测试、语法编译、构建、WSL、接收程序或Linux/硬件操作。未远程执行check/start/stop，未保存现场YAML。仅源码交付，不能据此宣称现场功能验收通过。

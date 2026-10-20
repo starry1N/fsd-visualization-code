@@ -41,7 +41,7 @@
         "targetOffset": [
           7.050764646418306,
           -2.5828861377448007,
-          -1.072262948271269e-15
+          -1.072262948271269E-15
         ],
         "target": [
           0,
@@ -230,6 +230,45 @@
               "first": "RawMessages!cliTransfer",
               "second": "RawMessages!cliVehicle"
             }
+          }
+        },
+        {
+          "title": "CLI 控制与参数",
+          "layout": {
+            "second": {
+              "second": "RawMessages!cliControl",
+              "first": "Parameters!cliConfig",
+              "direction": "row",
+              "splitPercentage": 60
+            },
+            "first": {
+              "second": {
+                "second": {
+                  "second": {
+                    "second": {
+                      "second": "Publish!cli_status",
+                      "first": "Publish!cli_reload",
+                      "direction": "row",
+                      "splitPercentage": 50.0
+                    },
+                    "first": "Publish!cli_save",
+                    "direction": "row",
+                    "splitPercentage": 33.33
+                  },
+                  "first": "Publish!cli_stop",
+                  "direction": "row",
+                  "splitPercentage": 25.0
+                },
+                "first": "Publish!cli_start",
+                "direction": "row",
+                "splitPercentage": 20.0
+              },
+              "first": "Publish!cli_check",
+              "direction": "row",
+              "splitPercentage": 16.67
+            },
+            "direction": "column",
+            "splitPercentage": 18
           }
         }
       ]
@@ -467,6 +506,74 @@
     "Table!taskState": {
       "topicPath": "/radio/cli/vehicle.rows",
       "foxglovePanelTitle": "车辆与任务状态"
+    },
+    "Parameters!cliConfig": {
+      "foxglovePanelTitle": "Linux YAML · 修改为草稿，点击保存配置提交"
+    },
+    "RawMessages!cliControl": {
+      "defaultExpanded": true,
+      "foxglovePanelTitle": "CLI状态与Linux操作结果",
+      "topicPath": "/radio/cli/control"
+    },
+    "Publish!cli_check": {
+      "advancedView": false,
+      "buttonText": "检查",
+      "topicName": "/fsd_radio/extension/tx",
+      "value": "{\"action\":\"check\",\"type\":\"cli\"}",
+      "datatype": "fsd_radio.CliCommand",
+      "buttonTooltip": "经E22调用Linux CLI统一接口，结果见CLI状态",
+      "foxglovePanelTitle": "检查",
+      "buttonColor": "#3b82f6"
+    },
+    "Publish!cli_start": {
+      "advancedView": false,
+      "buttonText": "启动",
+      "topicName": "/fsd_radio/extension/tx",
+      "value": "{\"action\":\"start\",\"type\":\"cli\"}",
+      "datatype": "fsd_radio.CliCommand",
+      "buttonTooltip": "经E22调用Linux CLI统一接口，结果见CLI状态",
+      "foxglovePanelTitle": "启动",
+      "buttonColor": "#22c55e"
+    },
+    "Publish!cli_stop": {
+      "advancedView": false,
+      "buttonText": "停止",
+      "topicName": "/fsd_radio/extension/tx",
+      "value": "{\"action\":\"stop\",\"type\":\"cli\"}",
+      "datatype": "fsd_radio.CliCommand",
+      "buttonTooltip": "经E22调用Linux CLI统一接口，结果见CLI状态",
+      "foxglovePanelTitle": "停止",
+      "buttonColor": "#ef4444"
+    },
+    "Publish!cli_save": {
+      "advancedView": false,
+      "buttonText": "保存配置",
+      "topicName": "/fsd_radio/extension/tx",
+      "value": "{\"action\":\"save\",\"type\":\"cli\"}",
+      "datatype": "fsd_radio.CliCommand",
+      "buttonTooltip": "经E22调用Linux CLI统一接口，结果见CLI状态",
+      "foxglovePanelTitle": "保存配置",
+      "buttonColor": "#8b5cf6"
+    },
+    "Publish!cli_reload": {
+      "advancedView": false,
+      "buttonText": "丢弃草稿并重新读取",
+      "topicName": "/fsd_radio/extension/tx",
+      "value": "{\"action\":\"reload\",\"type\":\"cli\"}",
+      "datatype": "fsd_radio.CliCommand",
+      "buttonTooltip": "经E22调用Linux CLI统一接口，结果见CLI状态",
+      "foxglovePanelTitle": "丢弃草稿并重新读取",
+      "buttonColor": "#f59e0b"
+    },
+    "Publish!cli_status": {
+      "advancedView": false,
+      "buttonText": "查询CLI状态",
+      "topicName": "/fsd_radio/extension/tx",
+      "value": "{\"action\":\"status\",\"type\":\"cli\"}",
+      "datatype": "fsd_radio.CliCommand",
+      "buttonTooltip": "经E22调用Linux CLI统一接口，结果见CLI状态",
+      "foxglovePanelTitle": "查询CLI状态",
+      "buttonColor": "#64748b"
     }
   },
   "layout": "Tab!radioMonitor",

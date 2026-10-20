@@ -430,3 +430,21 @@ RViz模板的Final planned path已启用；无线继续复用模板开关与topi
 ### 当前布局与交付文件
 
 统一使用本目录的foxglove_layout.json；不再分发旧车速布局、旧源时间布局或未采用的扩展草稿。数据新鲜度与GNSS质量均为background样式，接收年龄为bar样式；导入新版布局即可生效，无需重启接收端或占用第二个COM3串口。源码、布局与开发说明的目录约定见主项目docs/DELIVERY.md。
+
+## 0.7.0：Foxglove Parameters与CLI检查/启动/停止
+
+新增原生“CLI 控制与参数”页：Parameters按 `selection/module` 选择Linux YAML模块，修改 `yaml/<模块>/<完整YAML路径>` 只更新本机草稿；“保存配置”按钮将多个模块作为一次事务交给CLI校验保存。`meta/modules`列可用模块，source/revision/restart_required为只读元数据，status与dirty_count显示结果/草稿数。读取按需进行，不持续传全量参数。
+
+原生Publish按钮包括检查、启动、停止、保存配置、丢弃草稿并重新读取、查询CLI状态。发布到 `/fsd_radio/extension/tx`，schema为 `fsd_radio.CliCommand`，例 `{"type":"cli","action":"check"}`；action取check/start/stop/save/reload/status。PC自动附加请求UUID、boot、run和到期时间；不是ROS驾驶控制话题。`/radio/cli/control`展示Linux心跳、执行中操作和最终结果。Parameters与草稿在同一PC进程所有客户端间共享；CLI重启会清除旧草稿，断链不会自动提交新操作。
+
+Linux适配器 `cli_control.LinuxControl` 只转发到CLI邮箱，业务由 `fsd_startup/control_api.py` 在Manager原操作线程执行；配置由CLI ConfigStore写入，目录与交叉校验复用宿主tools。检查/启动/停止直接调用已有Manager流程，不另建进程管理器。保存只写Linux文件、刷新审计，不代表在线算法生效，不自动重启；启动返回也不代表全栈已经就绪。
+
+两端CLI与无线必须配套更新。Linux主仓库 `git pull --ff-only` 后 `git submodule update --init --recursive`；按原部署模式重启CLI与Linux无线程序。CLI需常驻菜单，例如 `bash start_fsd_manager.sh --menu --skip-build`，无终端则 `--headless --menu --skip-build --no-rviz`，保留原串口、模型等部署选项。默认无--menu仍会自动启动。无线独立运行，CLI stop不会退出CLI，才能再次远程start。Windows更新后重启start_windows.ps1并导入新版foxglove_layout.json；本版仅更新源码，不代表当前进程已加载。
+
+PC与Linux时间需同步：心跳源时间超过10秒、未来偏差超过5秒或本机8秒未收到心跳时，不允许新操作。CLI每秒写心跳，目标每2秒无线刷新，与既有日志/几何共用3000 UART B/s。RPC复用512字节扩展：最多256KiB JSON、zlib、144字节块/base64，每块ACK，2秒重传，最多8项在途请求/回复，约180秒等待。配置读取临时占扩展时隙，不增加总预算，不保证其他图层固定频率。
+
+串口ACK和块ACK不代表保存成功。最终回复含id、boot、ok、stage、result或error、Linux source_stamp_ns。CLI持久执行标记防止同ID重复启动，boot变化/旧run停止请求拒绝执行；崩溃或超时结果可能未知，查原ID而非重新启动。Linux可 `python3 fsd_startup/control_api.py cli.result --request-id <ID>`；邮箱和结果在 `.runtime/fsd_manager/control`。
+
+支持18项配置，缺失项标不可用；只编辑既有标量/定长标量数组，不改结构、null、别名或merge key。radio_linux只修改Linux副本，Windows配置不自动同步；改链路参数需双端配套。全部来源、覆盖项、事务及API详见主仓库 `docs/FOXGLOVE_PARAMETERS.md`。
+
+本轮按用户要求未执行测试、构建、WSL、串口或实车验证；未触发远程检查/启动/停止，未保存现场配置。

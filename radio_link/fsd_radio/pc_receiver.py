@@ -10,6 +10,7 @@ import time
 from .protocol import SLAVE
 from .worker import RadioWorker
 from .cli_telemetry import CliReceiver
+from .cli_control import PcControl
 from .essentials import profile_tag, STRIP
 
 LOG = logging.getLogger(__name__)
@@ -66,10 +67,14 @@ def run_pc(config, port, demo=False, duration=None):
         SLAVE, port, config, incoming.put_nowait, lambda session: peer_changed.set()
     )
 
-    def enqueue(body):
-        worker.outbox.extension(body)
+    cli_control = PcControl(worker.outbox)
 
-    view = FoxgloveView(config, enqueue)
+    def enqueue(body):
+        if not cli_control.enqueue(body):
+            worker.outbox.extension(body)
+
+    view = FoxgloveView(config, enqueue, cli_control)
+    cli_control.view = view
     cli_receiver = (
         CliReceiver(
             config["cli"]["pc_storage"],
@@ -141,6 +146,13 @@ def run_pc(config, port, demo=False, duration=None):
             while not incoming.empty():
                 message = incoming.get_nowait()
                 try:
+                    if message['k'] == 'cli_control':
+                        cli_control.accept_heartbeat(message)
+                        continue
+                    if message['k'] == 'extension' and message['body'].get('type') in ('cli_rpc', 'cli_rpc_ack'):
+                        with cli_control.lock:
+                            cli_control.peer.accept(message['body'])
+                        continue
                     if message["k"] == "cli_run" and cli_receiver:
                         cli_receiver.select_run(message)
                     elif message["k"] == "cli_log" and cli_receiver:
@@ -160,6 +172,7 @@ def run_pc(config, port, demo=False, duration=None):
                     if cli_receiver and message["k"] in ("cli_log", "cli_run"):
                         cli_receiver.error = str(exc)
                     LOG.warning("invalid received display message: %s", exc)
+            cli_control.tick()
             if now - last_refresh >= 1:
                 view.refresh()
                 view.log(

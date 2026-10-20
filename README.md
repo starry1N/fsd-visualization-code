@@ -287,3 +287,7 @@ FSD_SETUP=/home/wuta/WUTA2026_FINAL/WUTA-FSD/ros2_ws/install/setup.bash bash sta
 2026-10-20：Foxglove新增“传感器概览”页，使用原生Indicator/Gauge/Table展示设备状态、GNSS质量、数据新鲜度和参数。更新Windows接收端并导入radio_link/foxglove_layout.json；无需扩展包或Linux修改。
 
 传感器原生布局更新：新鲜度与GNSS质量使用背景色，快照接收年龄使用条形Gauge。只维护radio_link/foxglove_layout.json这一份当前布局；旧交付截图和未采用方案已移出交付目录。
+
+### 2026-10-20：无线0.7.0与CLI统一接口
+
+原生Parameters与Publish接入CLI配置编辑、检查、启动和停止，新增“CLI 控制与参数”布局页。无线仅传输请求/结果，配置写入与操作由原CLI Manager执行，保存不隐式热更新或重启。需配套更新主仓库/CLI/显示子模块并重启两端；用法见[无线说明](radio_link/README.md)。本轮未运行测试、构建、WSL或实机验证。

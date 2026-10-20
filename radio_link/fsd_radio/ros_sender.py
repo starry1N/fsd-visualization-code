@@ -18,6 +18,7 @@ from .protocol import MASTER
 from .worker import RadioWorker
 from .essentials import profile_tag
 from .cli_telemetry import CliForwarder
+from .cli_control import LinuxControl
 
 LOG = logging.getLogger(__name__)
 
@@ -40,6 +41,7 @@ def run_linux(config, port, use_sim_time=False):
         incoming.put_nowait(message)
 
     worker = RadioWorker(MASTER, port, config, receive)
+    cli_control = LinuxControl(config, worker.outbox)
     cli_forwarder = (
         CliForwarder(config, worker.outbox)
         if config.get("cli", {}).get("enabled")
@@ -215,6 +217,7 @@ def run_linux(config, port, use_sim_time=False):
             wall = time.monotonic()
             if cli_forwarder:
                 cli_forwarder.tick(wall)
+            cli_control.tick()
             for name in self.seen:
                 # Snapshot preparation is bounded and stays on the ROS thread.
                 if wall - self.snapshots_last.get(name, -1e9) < min(
@@ -289,6 +292,12 @@ def run_linux(config, port, use_sim_time=False):
                     LOG.warning("ignored non-extension uplink")
                     continue
                 body = message["body"]
+                if body.get('type') in ('cli_rpc', 'cli_rpc_ack'):
+                    try:
+                        cli_control.peer.accept(body)
+                    except (ValueError, TypeError, KeyError, OSError) as exc:
+                        LOG.warning('CLI request rejected: %s', exc)
+                    continue
                 self.extension_pub.publish(
                     String(
                         data=json.dumps(
