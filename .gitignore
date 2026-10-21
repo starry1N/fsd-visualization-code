@@ -6,3 +6,4 @@ __pycache__/
 *.pyc
 *.bak
 validation/*.log
+radio_link/dist/

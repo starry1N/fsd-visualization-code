@@ -8,7 +8,7 @@
 
 无线模块按用户确认的**透传、115200 bps 8N1、空速 62.5 kbps**使用。程序不发送模块配置命令，不修改频率、密钥、地址、工作模式或功率。Linux 串口读取 `radio.yaml:serial.linux_port`，启动参数可覆盖；使用前核对实际无线模块设备，当前默认by-id路径见部署说明。
 
-## 当前版本与操作入口（0.7.8）
+## 当前版本与操作入口（0.7.9）
 
 以下为当前源码默认值。文中带明确版本号的历史记录保留原条件，不能据此把160 B/s、旧筛选日志或旧页名当作当前部署配置。
 
@@ -28,6 +28,14 @@ Windows运行 `start_windows.ps1` 时自动寻找依赖齐全的64位Python 3.10
 | 布局 | 本目录foxglove_layout.json；本机副本D:\ebyte\output\FSD_E22_CLI与传感器.json |
 
 通用升级先等待在途操作完成，再从主仓库 `git pull --ff-only`、`git submodule update --init --recursive` 配套更新CLI与无线。PC显示功能变更加载Windows接收端和布局；只换布局无需重启。当前运行源码/交付见宿主docs/DELIVERY.md，参数/操作细节见宿主docs/FOXGLOVE_PARAMETERS.md。
+
+## Windows单文件exe（0.7.9）
+
+本机成品为 `D:\ebyte\output\FSD_E22_Receiver.exe`，面向Windows x64，内置Python与接收依赖，无需运行setup_windows.ps1。双击会打开接收终端，自动匹配原USB适配器；Foxglove连接 `ws://127.0.0.1:8765`，导入原foxglove_layout.json。先退出旧接收程序再开exe，避免同时占用串口/服务端口；Ctrl+C停止。USB串口驱动及Foxglove仍需安装，exe不包含这两者。文件可以单独复制到其他目录，默认配置/渲染器资源均在包内，日志仍存用户目录 `~/.fsd_radio/cli_received`。
+
+命令行覆盖示例：`FSD_E22_Receiver.exe --port COM3 --mode bridge`。默认沿用radio.yaml中的native模式；按Linux输入模式选择。自定义配置先运行 `FSD_E22_Receiver.exe --export-config .\config`，仅导出当前内置默认值及布局并退出，不启动串口；不会覆盖已有配置。将生成的完整config目录放在exe旁，后续自动使用 `config/radio_link/radio.yaml`，可编辑其中串口/USB/RSSI等。也可 `--config <radio.yaml路径>`，须保留其topics_config/rviz_config引用的文件与相对目录。更新exe不会覆盖外部配置；布局仍由Foxglove手动导入。参数控制页仍编辑Linux CLI配置，非此本机配置。
+
+重新构建：Windows先运行setup_windows.ps1准备开发环境，然后 `build_windows.ps1`；支持-Python和-OutputDirectory。构建脚本安装固定PyInstaller 6.22.0，默认输出radio_link/dist/FSD_E22_Receiver.exe。windows_receiver.spec收集Foxglove原生扩展、配置、原显示渲染器及依赖元数据；入口windows_receiver.py直接复用load_config/run_pc，不另写接收/控制链。打包说明依据[PyInstaller官方文档](https://pyinstaller.org/en/stable/spec-files.html)。本轮仅Windows原生构建成功，未启动成品、运行测试或进行串口验收。
 
 ## 完整CLI日志（自0.6.2起，当前保留）
 

@@ -3,6 +3,7 @@
 import importlib.util
 import math
 from pathlib import Path
+import sys
 import yaml
 
 DISPLAY_NAMES = {
@@ -25,8 +26,10 @@ def load_config(filename, mode=None):
     topics = yaml.safe_load(Path(config["topics_config"]).read_text(encoding="utf-8"))
     template = yaml.safe_load(Path(config["rviz_config"]).read_text(encoding="utf-8"))
     renderer = (
-        Path(__file__).resolve().parents[2]
-        / "src/fsd_visualization/fsd_visualization/configuration.py"
+        Path(sys._MEIPASS) if getattr(sys, 'frozen', False)
+        else Path(__file__).resolve().parents[2]
+    ) / (
+        "src/fsd_visualization/fsd_visualization/configuration.py"
     )
     # The original pure configuration module has no ROS dependency.
     if not renderer.is_file():
