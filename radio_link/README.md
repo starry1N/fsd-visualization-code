@@ -1,5 +1,9 @@
 # FSD E22 低带宽双向遥测
 
+宿主CLI正常启动时默认以独立进程调用本目录 `start_linux.sh --mode bridge`，不会导入无线ROS节点到CLI进程。CLI的 `--no-radio` 可关闭联启，`--radio-mode native`可切换新进程输入模式；检查、状态、停止和仅构建入口不联启。已有发送端保持原配置，有桌面时新发送端运行在独立GNOME终端，输出同时追加到宿主 `.runtime/fsd_radio/linux.log`；没有桌面时使用独立后台进程。已有发送端打开日志查看窗口，不重启它。
+
+本目录脚本仍可单独启动；Linux CLI入口持有项目 `.runtime/fsd_radio/sender.lock`，两个启动方式共用此锁。无线不进入CLI的车辆进程登记/停止清单；CLI退出后无线继续运行，独立退出无线需向其PID发送SIGINT。无线失败不会让CLI退出，也没有自动重启策略。更新后需重新打开CLI，已有无线进程保持原状态。
+
 工控机 Linux 从现有 ROS 2 读取显示数据，经 E22 透传无线链路发送；Windows自动选择USB适配器串口接收，在本机启动 Foxglove 官方 SDK 服务。Foxglove 连接 `ws://127.0.0.1:8765` 即可显示，无需在 Windows 安装 ROS。两端均可收发独立 JSON 扩展消息。
 
 无线模块按用户确认的**透传、115200 bps 8N1、空速 62.5 kbps**使用。程序不发送模块配置命令，不修改频率、密钥、地址、工作模式或功率。Linux 串口读取 `radio.yaml:serial.linux_port`，启动参数可覆盖；使用前核对实际无线模块设备，当前默认by-id路径见部署说明。
