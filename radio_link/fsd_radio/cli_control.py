@@ -126,6 +126,27 @@ class PcControl:
         self.saving = False
         self.last_publish = -1e9
         self.failed_reads = set()
+        self.parameter_outcome = '等待'
+        self.parameter_detail = '等待Linux参数源'
+
+    def parameter_note(self, outcome, detail):
+        self.parameter_outcome, self.parameter_detail = outcome, str(detail)
+        self.changed = True
+
+    def parameter_state(self, online):
+        if not self.heartbeat:
+            return '等待'
+        if not online:
+            return '离线'
+        if self.saving or 'save' in self.queue:
+            return '保存中'
+        if self.parameter_outcome in ('失败', '结果未知'):
+            return self.parameter_outcome
+        if any(p['op'] in ('config.list', 'config.read') for p in self.pending.values()):
+            return '读取中'
+        if any(self.drafts.values()):
+            return '未保存'
+        return self.parameter_outcome
 
     def online(self):
         source_age = (time.time_ns() - int(self.heartbeat.get('t') or 0)) / 1e9
@@ -187,8 +208,10 @@ class PcControl:
                         else:
                             edits['/' + path] = value
                 self.note('草稿尚未保存；点击“保存配置”提交，Linux确认后才算成功')
+                self.parameter_note('就绪', '草稿已更新，修改后需点击保存配置')
             except (ValueError, TypeError, KeyError) as exc:
                 self.note(exc)
+                self.parameter_note('失败', exc)
             return self.parameters()
 
     def accept_heartbeat(self, message):
@@ -212,6 +235,7 @@ class PcControl:
                 self.saving = False
                 self.cache = {'selection/module': 'controller', 'meta/online': False}
                 self.note('CLI已切换，旧操作结果未知，请检查状态' if unknown else '正在读取CLI配置目录')
+                self.parameter_note('等待', 'CLI已切换，正在重新读取参数')
             self.heartbeat = message
             self.received = time.monotonic()
             self.changed = True
@@ -248,6 +272,8 @@ class PcControl:
                 if op in ('config.list', 'config.read'):
                     self.failed_reads.add(args.get('module', '__catalog__'))
                 self.note('Linux返回失败：' + str(response.get('error')))
+                if op.startswith('config.'):
+                    self.parameter_note('失败', response.get('error'))
                 return
             result = response.get('result', {})
             if op == 'config.list':
@@ -269,8 +295,11 @@ class PcControl:
                     self.cache = {k: v for k, v in self.cache.items()
                                   if not k.startswith(('yaml/' + module + '/', 'meta/' + module + '/'))}
                 self.note(result.get('message', 'Linux已保存，重启相关进程后生效'))
+                self.parameter_note('已保存', result.get('message', 'Linux已保存，需重启相关进程生效'))
                 return
             if op in ('config.list', 'config.read'):
+                if self.parameter_outcome != '已保存':
+                    self.parameter_note('就绪', 'Linux参数已读取')
                 self.cache['meta/loaded_modules'] = ', '.join(self.files)
                 self.changed = True
                 if not self.last_result:
@@ -296,9 +325,12 @@ class PcControl:
                     self.pending.pop(ident)
                     if pending['op'] == 'config.set':
                         self.saving = False
+                    if pending['op'].startswith('config.'):
+                        self.parameter_note('结果未知', '请求超时，请重新读取或查询原结果。ID=' + ident)
                     self.failed_reads.add(pending['args'].get('module', '__catalog__'))
                     self.note('请求超时，结果未知；请查询CLI状态，勿重复启动。ID=' + ident)
             if online:
+                action = None
                 try:
                     if self.queue:
                         action = self.queue.popleft()
@@ -311,6 +343,7 @@ class PcControl:
                                 raise ValueError('没有待保存的草稿')
                             self.request('config.set', updates=updates)
                             self.saving = True
+                            self.parameter_note('保存中', '等待Linux校验与保存结果')
                         elif action == 'reload':
                             if self.saving or self.pending:
                                 raise ValueError('请等待当前请求结束后重新读取')
@@ -320,6 +353,7 @@ class PcControl:
                             self.failed_reads.clear()
                             self.cache = {k: v for k, v in self.cache.items() if not k.startswith(('yaml/', 'meta/'))}
                             self.note('已丢弃草稿，重新读取Linux文件')
+                            self.parameter_note('等待', '已丢弃草稿，正在重新读取Linux文件')
                         else:
                             if action in ('check', 'start', 'stop') and any(
                                     p['op'] in ('cli.check', 'cli.start', 'cli.stop') for p in self.pending.values()):
@@ -333,6 +367,8 @@ class PcControl:
                         self.request('config.read', module=selected)
                 except (ValueError, KeyError, TypeError) as exc:
                     self.note(exc)
+                    if action in ('save', 'reload'):
+                        self.parameter_note('失败', exc)
             elif self.queue:
                 self.queue.clear()
                 self.note('CLI离线，未发送排队操作；恢复连接后请重新操作')
@@ -351,6 +387,8 @@ class PcControl:
                 status = {
                     **self.heartbeat, 'online': online, 'status': self.cache.get('meta/status'),
                     'busy': busy,
+                    'parameter_state': self.parameter_state(online),
+                    'parameter_detail': self.parameter_detail,
                     'display_state': ('等待CLI状态' if not self.heartbeat else
                                       '离线' if not online else
                                       '操作中' if busy else

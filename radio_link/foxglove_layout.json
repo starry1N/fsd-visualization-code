@@ -265,13 +265,23 @@
         {
           "title": "参数控制",
           "layout": {
-            "first": {
-              "first": "Publish!cli_save",
-              "second": "Publish!cli_reload",
-              "splitPercentage": 50.0,
-              "direction": "row"
+            "second": {
+              "second": {
+                "second": "RawMessages!parameterStatus",
+                "first": "Parameters!cliConfig",
+                "splitPercentage": 85,
+                "direction": "column"
+              },
+              "first": {
+                "first": "Publish!cli_save",
+                "second": "Publish!cli_reload",
+                "splitPercentage": 50.0,
+                "direction": "row"
+              },
+              "splitPercentage": 14,
+              "direction": "column"
             },
-            "second": "Parameters!cliConfig",
+            "first": "Indicator!parameterState",
             "splitPercentage": 12,
             "direction": "column"
           }
@@ -2237,6 +2247,75 @@
         }
       ],
       "fontSize": 22
+    },
+    "Indicator!parameterState": {
+      "style": "background",
+      "path": "/radio/cli/control.parameter_state",
+      "foxglovePanelTitle": "参数操作状态",
+      "fallbackLabel": "等待参数状态",
+      "rules": [
+        {
+          "label": "等待参数源",
+          "operator": "=",
+          "rawValue": "等待",
+          "color": "#64748b"
+        },
+        {
+          "label": "参数源离线",
+          "operator": "=",
+          "rawValue": "离线",
+          "color": "#64748b"
+        },
+        {
+          "label": "参数读取中",
+          "operator": "=",
+          "rawValue": "读取中",
+          "color": "#f59e0b"
+        },
+        {
+          "label": "保存中 · 等待Linux确认",
+          "operator": "=",
+          "rawValue": "保存中",
+          "color": "#f59e0b"
+        },
+        {
+          "label": "草稿未保存",
+          "operator": "=",
+          "rawValue": "未保存",
+          "color": "#f59e0b"
+        },
+        {
+          "label": "参数就绪",
+          "operator": "=",
+          "rawValue": "就绪",
+          "color": "#3b82f6"
+        },
+        {
+          "label": "Linux已保存 · 重启相关进程生效",
+          "operator": "=",
+          "rawValue": "已保存",
+          "color": "#22c55e"
+        },
+        {
+          "label": "参数操作失败 · 查看状态详情",
+          "operator": "=",
+          "rawValue": "失败",
+          "color": "#ef4444"
+        },
+        {
+          "label": "操作超时 · 结果未知",
+          "operator": "=",
+          "rawValue": "结果未知",
+          "color": "#ef4444"
+        }
+      ],
+      "fontSize": 22,
+      "fallbackColor": "#64748b"
+    },
+    "RawMessages!parameterStatus": {
+      "foxglovePanelTitle": "参数操作详情",
+      "topicPath": "/radio/cli/control.parameter_detail",
+      "defaultExpanded": true
     }
   },
   "layout": "Tab!radioMonitor",
