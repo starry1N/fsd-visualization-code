@@ -120,6 +120,16 @@ def validate(config):
     ):
         positive(link[name], name)
     baud = config["serial"]["baud"]
+    if str(config['serial'].get('pc_port', '')).lower() == 'auto':
+        usb = config['serial'].get('pc_usb', {'vid': 0x1A86, 'pid': 0x7523})
+        if not isinstance(usb, dict):
+            raise ValueError('serial.pc_usb must be a USB selector mapping')
+        for name in ('vid', 'pid'):
+            if type(usb.get(name)) is not int or not 0 <= usb[name] <= 65535:
+                raise ValueError(f'serial.pc_usb.{name} must be a 16-bit integer')
+        for name in ('serial_number', 'location'):
+            if not isinstance(usb.get(name, ''), str):
+                raise ValueError(f'serial.pc_usb.{name} must be a string')
     for key in ('append_rssi_pc', 'append_rssi_linux'):
         if type(config['serial'].get(key, False)) is not bool:
             raise ValueError(f'serial.{key} must be boolean')

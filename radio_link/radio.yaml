@@ -4,7 +4,12 @@ rviz_config: ../src/fsd_visualization/config/fsd.rviz
 display_mode: native  # Match the supplied RViz layers; --mode bridge follows the viewer bridge.
 velocity_topic: /chcnav/velocity  # real-car source; override for a different deployment.
 serial:
-  pc_port: COM3
+  pc_port: auto  # Resolve the matching USB adapter at startup and after disconnect.
+  pc_usb:
+    vid: 0x1A86
+    pid: 0x7523
+    serial_number: ''  # Optional exact match; this CH340 exposes no serial number.
+    location: ''  # Optional USB topology match when multiple identical adapters exist.
   linux_port: /dev/serial/by-id/usb-1a86_USB_Serial-if00-port0  # E22 CH340; single matching adapter.
   baud: 115200  # UART 8N1; both E22 modules must use 62.5 kbps air rate.
   module_packet_bytes: 240  # Record the actual module setting; not programmed by this app.

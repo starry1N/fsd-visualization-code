@@ -1,10 +1,10 @@
 # FSD E22 低带宽双向遥测
 
-工控机 Linux 从现有 ROS 2 读取显示数据，经 E22 透传无线链路发送；Windows 从 COM3 接收，在本机启动 Foxglove 官方 SDK 服务。Foxglove 连接 `ws://127.0.0.1:8765` 即可显示，无需在 Windows 安装 ROS。两端均可收发独立 JSON 扩展消息。
+工控机 Linux 从现有 ROS 2 读取显示数据，经 E22 透传无线链路发送；Windows自动选择USB适配器串口接收，在本机启动 Foxglove 官方 SDK 服务。Foxglove 连接 `ws://127.0.0.1:8765` 即可显示，无需在 Windows 安装 ROS。两端均可收发独立 JSON 扩展消息。
 
 无线模块按用户确认的**透传、115200 bps 8N1、空速 62.5 kbps**使用。程序不发送模块配置命令，不修改频率、密钥、地址、工作模式或功率。Linux 串口读取 `radio.yaml:serial.linux_port`，启动参数可覆盖；使用前核对实际无线模块设备，当前默认by-id路径见部署说明。
 
-## 当前版本与操作入口（0.7.4）
+## 当前版本与操作入口（0.7.5）
 
 以下为当前源码默认值。文中带明确版本号的历史记录保留原条件，不能据此把160 B/s、旧筛选日志或旧页名当作当前部署配置。
 
@@ -229,7 +229,7 @@ Linux主轮询，PC只响应有效轮询。应用帧最多226字节、数据片1
 ```powershell
 cd D:\ebyte\WUTA2026_FINAL\fsd-visualization-code\radio_link
 .\setup_windows.ps1
-.\start_windows.ps1                      # COM3，native
+.\start_windows.ps1                      # 自动选择USB串口，native
 ```
 
 若本机脚本执行策略阻止运行，可在当前会话调用 `powershell -ExecutionPolicy Bypass -File .\setup_windows.ps1`，或直接执行等价命令：
@@ -513,3 +513,11 @@ CLI状态Indicator新增橙色“操作中”：在线CLI有活动管理请求�
 /radio/link.rssi字段：enabled、valid、raw、display_raw、age_s、captured_at_unix_ns、clock_domain=unix、time_origin=local_uart_capture、samples、packet_session、packet_seq。display_raw为有效原始值或-1等待/-2关闭/-3过期/-4断开；raw保留最近样本供诊断，过期时不继续作为有效值显示。时间来自本机读到尾字节的Unix纳秒采集时刻，不能冒充模块硬件时间或Linux ROS源时间。samples包含通过应用帧CRC的接收包/重传包，非业务消息计数。
 
 此为模块生成的接收端串口附加元数据，不增加应用无线消息；USB串口RX计数会包含附加字节。按要求未运行测试、WSL、构建或实机验证，尚未核验硬件追加粒度/换算；新增test_rssi.py覆盖全部256个字节、逐字节拆分、粘包、关闭解析及过期行为，未执行。部署时发现用户已在22:06重新启动旧接收程序；确认无在途操作后，已重启Windows接收端加载本版，沿用COM3/115200/native，需重新导入布局。未发送CLI操作或写模块寄存器。
+
+## 0.7.5：Windows自动选择USB串口
+
+默认serial.pc_port=auto，start_windows.ps1不再固定COM3。接收线程每次启动/断线重连都枚举USB串口，按serial.pc_usb的VID/PID选择当前CH340适配器（1A86:7523）；因此端口变为COM4/COM7也无需改号。未插入时保留Foxglove服务并每秒等待设备；同型号候选超过一个时提示歧义，不任取第一个、不尝试打开其他设备。手动覆盖仍可用 `start_windows.ps1 -Port COM3`，显式端口按原行为重连。
+
+此识别依据USB转串口芯片，不是E22射频型号认证。当前适配器没有序列号；多个同型号适配器可配置pc_usb.location固定USB位置，或有序列号的设备配置pc_usb.serial_number精确匹配。枚举不打开串口、不切配置模式、不发送探测/寄存器指令。Linux串口选择保持原配置；硬件RSSI/波特率等仍须匹配。
+
+/radio/link.port显示实际选中COM号，port_selection为auto/explicit。使用已存在的接收进程不会自动加载新选择方式，应下次通过start_windows.ps1启动，不要同时开两个读者。本轮只枚举观察本机CH340位于COM3，未打开/重启接收程序、未执行测试或WSL；新增选择规则用例未运行。

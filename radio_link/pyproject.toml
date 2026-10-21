@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fsd-radio-link"
-version = "0.7.4"
+version = "0.7.5"
 description = "Bounded bidirectional E22 telemetry for ROS 2 and Foxglove"
 requires-python = ">=3.10"
 dependencies = ["pyserial==3.5", "PyYAML>=6,<7"]
