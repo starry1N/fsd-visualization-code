@@ -675,6 +675,102 @@
           "operator": "=",
           "color": "#ef4444",
           "rawValue": "清理未完成；请 p 认证后重试 x / q"
+        },
+        {
+          "rawValue": "退出码:0",
+          "operator": "=",
+          "label": "启动任务退出 0 · 正常结束",
+          "color": "#3b82f6"
+        },
+        {
+          "rawValue": "退出码:1",
+          "operator": "=",
+          "label": "启动任务退出 1 · 启动或运行失败 · 查看日志",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:2",
+          "operator": "=",
+          "label": "启动任务退出 2 · 参数或命令用法错误",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:126",
+          "operator": "=",
+          "label": "启动任务退出 126 · 命令无法执行",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:127",
+          "operator": "=",
+          "label": "启动任务退出 127 · 命令不存在或无法启动",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:130",
+          "operator": "=",
+          "label": "启动任务退出 130 · SIGINT 中断 · 可能为主动停止",
+          "color": "#f59e0b"
+        },
+        {
+          "rawValue": "退出码:143",
+          "operator": "=",
+          "label": "启动任务退出 143 · SIGTERM 请求终止",
+          "color": "#f59e0b"
+        },
+        {
+          "rawValue": "退出码:137",
+          "operator": "=",
+          "label": "启动任务退出 137 · SIGKILL 强制终止 · 查看日志",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:-2",
+          "operator": "=",
+          "label": "启动任务退出 -2 · SIGINT 中断 · 可能为主动停止",
+          "color": "#f59e0b"
+        },
+        {
+          "rawValue": "退出码:-15",
+          "operator": "=",
+          "label": "启动任务退出 -15 · SIGTERM 请求终止",
+          "color": "#f59e0b"
+        },
+        {
+          "rawValue": "退出码:-9",
+          "operator": "=",
+          "label": "启动任务退出 -9 · SIGKILL 强制终止 · 查看日志",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:134",
+          "operator": "=",
+          "label": "启动任务退出 134 · SIGABRT 异常终止",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:-6",
+          "operator": "=",
+          "label": "启动任务退出 -6 · SIGABRT 异常终止",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:139",
+          "operator": "=",
+          "label": "启动任务退出 139 · SIGSEGV 段错误",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:-11",
+          "operator": "=",
+          "label": "启动任务退出 -11 · SIGSEGV 段错误",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "其他退出码",
+          "operator": "=",
+          "label": "启动任务已退出 · 其他退出码见详情",
+          "color": "#ef4444"
         }
       ]
     },

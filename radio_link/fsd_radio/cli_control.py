@@ -5,6 +5,7 @@ No configuration writes or process management are performed by the radio adapter
 from collections import deque
 import hashlib
 import json
+import re
 from pathlib import Path
 import threading
 import time
@@ -12,6 +13,29 @@ import uuid
 
 from .cli_telemetry import atomic_json
 from .rpc import RpcPeer, CONTROL_OPERATIONS
+
+EXIT_MEANINGS = {
+    0: '正常结束', 1: '启动或运行失败，查看日志', 2: '参数或命令用法错误',
+    126: '命令无法执行', 127: '命令不存在或子进程无法启动',
+    130: 'SIGINT 中断（可能为主动停止）', 143: 'SIGTERM 请求终止',
+    137: 'SIGKILL 强制终止（原因见日志）',
+    -2: 'SIGINT 中断（可能为主动停止）', -15: 'SIGTERM 请求终止',
+    -9: 'SIGKILL 强制终止（原因见日志）',
+    134: 'SIGABRT 异常终止', -6: 'SIGABRT 异常终止',
+    139: 'SIGSEGV 段错误', -11: 'SIGSEGV 段错误',
+}
+
+
+def runtime_exit(heartbeat):
+    code = heartbeat.get('runtime_exit_code')
+    if type(code) is not int:
+        # Rolling upgrade: old CLI may only include the code in its phase text.
+        match = re.search(r'启动任务结束，退出码\s*(-?\d+)', str(heartbeat.get('phase', '')))
+        code = int(match[1]) if match else None
+    if code is None:
+        return None, None, None
+    meaning = EXIT_MEANINGS.get(code, '其他子进程退出码，查看日志')
+    return code, f'启动任务退出 {code}：{meaning}', ('退出码:' + str(code) if code in EXIT_MEANINGS else '其他退出码')
 
 
 def request_hash(request):
@@ -77,7 +101,8 @@ class LinuxControl:
             self.outbox.update_aux('cli_control', {
                 'k': 'cli_control', 't': self.state['updated_ns'], 'clock_domain': 'unix',
                 **{key: self.state.get(key) for key in
-                   ('boot', 'online', 'phase', 'running', 'run', 'active', 'last', 'config_error')}
+                   ('boot', 'online', 'phase', 'running', 'run', 'active', 'last', 'config_error',
+                    'runtime_exit_code')}
             }, interval=2, weight=3)
             self.last_heartbeat = now
         for ident, pending in sorted(list(self.pending.items()), key=lambda row: not row[1]['priority']):
@@ -384,15 +409,22 @@ class PcControl:
                     (self.heartbeat.get('active') or {}).get('op') in CONTROL_OPERATIONS
                     or any(item['op'] in CONTROL_OPERATIONS for item in self.pending.values())
                     or any(action in ('check', 'start', 'stop', 'status', 'save') for action in self.queue)))
+                exit_code, exit_detail, exit_state = runtime_exit(self.heartbeat)
+                phase = str(self.heartbeat.get('phase') or '未知状态')
+                show_exit = (not self.heartbeat.get('running') and exit_state and
+                             (phase == '已停止' or phase.startswith('启动任务结束，退出码')))
                 status = {
                     **self.heartbeat, 'online': online, 'status': self.cache.get('meta/status'),
                     'busy': busy,
                     'parameter_state': self.parameter_state(online),
                     'parameter_detail': self.parameter_detail,
+                    'runtime_exit_code': exit_code,
+                    'exit_detail': exit_detail,
+                    'exit_code_origin': 'start_full_fsd_child' if exit_code is not None else None,
                     'display_state': ('等待CLI状态' if not self.heartbeat else
                                       '离线' if not online else
                                       '操作中' if busy else
-                                      str(self.heartbeat.get('phase') or '未知状态')),
+                                      exit_state if show_exit else phase),
                     'dirty_count': self.cache.get('meta/dirty_count', 0),
                     'pending': [{'id': k, 'op': v['op']} for k, v in self.pending.items()],
                     'result': self.last_result,
