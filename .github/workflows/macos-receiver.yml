@@ -1,0 +1,88 @@
+name: Build macOS E22 receiver
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Optional new Release tag, e.g. radio-macos-v0.7.10; blank uploads Actions artifacts only'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-receiver-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: macOS-${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+            python_arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+            python_arch: x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: ${{ matrix.python_arch }}
+      - name: Build native executable and portable archive (no receiver/tests)
+        run: bash radio_link/build_macos.sh "$GITHUB_WORKSPACE/artifacts"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macOS-${{ matrix.arch }}
+          path: artifacts/*
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: ${{ inputs.release_tag != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Publish both successful builds together
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^radio-macos-v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z]+)*$ ]] || { echo 'Invalid macOS release tag'; exit 1; }
+          cat > release-notes.md <<'NOTES'
+          macOS E22 接收端：内置 Python，无需本机安装 Python。
+
+          - Apple 芯片下载 arm64，Intel Mac 下载 x86_64；完整解压后双击 Start_Receiver.command。
+          - Foxglove 连接 ws://127.0.0.1:8765，导入包内 FSD_E22_CLI.json。
+          - 保留当前日志、传感器、RSSI、参数、CLI控制及M键模式循环；需配套更新Linux CLI与无线。
+          - macOS 15原生构建。仍需Foxglove及适配器驱动；未Apple Developer ID签名/公证，首次运行可能需手动允许。
+          - 仅构建，不启动接收器、不运行测试或实机验收。源码提交及构建系统见包内BUILD_INFO.txt。
+          NOTES
+          # Refuse to replace an existing release or attach builds to an unrelated tag.
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo 'Release already exists; choose a new tag.'
+            exit 1
+          fi
+          if gh api "repos/$GH_REPO/git/ref/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            echo 'Tag already exists; choose a new tag.'
+            exit 1
+          fi
+          gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --draft --latest=false \
+            --title "E22 macOS receiver $RELEASE_TAG" --notes-file release-notes.md artifacts/*
+          gh release edit "$RELEASE_TAG" --draft=false --latest=false

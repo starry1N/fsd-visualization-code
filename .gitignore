@@ -7,3 +7,4 @@ __pycache__/
 *.bak
 validation/*.log
 radio_link/dist/
+radio_link/.venv-macos/

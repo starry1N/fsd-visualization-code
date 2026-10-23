@@ -1,4 +1,4 @@
-"""Single-file Windows build. No application/serial entry is executed here."""
+"""Shared desktop single-file build; does not execute the receiver."""
 from pathlib import Path
 import sys
 from PyInstaller.utils.hooks import collect_all, copy_metadata
@@ -27,7 +27,8 @@ data += [
 analysis = Analysis(
     [str(radio / 'windows_receiver.py')], pathex=[str(radio)],
     binaries=binaries, datas=data,
-    hiddenimports=hidden + ['serial.tools.list_ports_windows'],
+    hiddenimports=hidden + ['serial.tools.list_ports_osx' if sys.platform == 'darwin'
+                            else 'serial.tools.list_ports_windows'],
     excludes=['rclpy', 'pytest', 'tkinter'],
 )
 pyz = PYZ(analysis.pure)

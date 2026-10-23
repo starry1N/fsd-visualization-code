@@ -549,3 +549,5 @@ CLI Manager的runtime_exit_code经原心跳/状态接口传输，PC指示器在�
 完整显示需配套加载CLI、Linux发送端、Windows接收端并导入布局；当前进程本轮未重启，未执行测试或实车操作。
 
 0.7.10：原“CLI日志与控制”检查/启动行新增“切换模式”，等同Linux CLI M键（正常→制动台架→有人跑动记录→正常）。模式直接附在原CLI状态Indicator，运行时显示真实active_mode，停止时显示selected_mode；离线不保留成当前模式，缺字段显示未知。切换只在停止并清理后生效，不自动检查或启动，sensor-only/build-only拒绝。控制请求cli.cycle_mode含expected_mode，避免状态变化后迟到切换；同检查/启动/停止的高优先级及在途互斥。配套更新CLI、Linux无线、Windows接收器并导入布局；仅更换布局或PC不足。源码包与本机exe已更新，Windows原生构建；未运行测试、WSL、接收端或远程业务操作。
+
+macOS打包：GitHub Actions的Build macOS E22 receiver工作流（.github/workflows/macos-receiver.yml）手动触发，在macos-15 arm64和macos-15-intel原生构建；release_tag为空只上传Actions构建产物，指定新的radio-macos-v版本标签则双架构均成功后创建独立Mac Release，不替换既有Windows Release。复用windows_receiver.py/windows_receiver.spec，spec按平台选择串口枚举后端；build_macos.sh可在Mac本机重建，不运行应用或测试。下载解压后双击Start_Receiver.command，终端运行内置Python的FSD_E22_Receiver；保留全部0.7.10功能。未Developer ID签名/公证，首次打开可能需macOS手动允许；完整使用见MACOS_README.md。当前仅macOS15构建，旧系统与实机串口尚未验收。
