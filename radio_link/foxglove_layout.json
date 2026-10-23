@@ -41,7 +41,7 @@
         "targetOffset": [
           7.050764646418306,
           -2.5828861377448007,
-          -1.072262948271269E-15
+          -1.072262948271269e-15
         ],
         "target": [
           0,
@@ -174,20 +174,25 @@
               "direction": "column",
               "second": {
                 "first": {
-                  "first": "Publish!cli_check",
+                  "first": "Publish!cli_cycle_mode",
                   "second": {
-                    "first": "Publish!cli_start",
+                    "first": "Publish!cli_check",
                     "second": {
-                      "first": "Publish!cli_stop",
-                      "second": "Publish!cli_status",
-                      "splitPercentage": 50.0,
-                      "direction": "row"
+                      "first": "Publish!cli_start",
+                      "second": {
+                        "first": "Publish!cli_stop",
+                        "second": "Publish!cli_status",
+                        "direction": "row",
+                        "splitPercentage": 50.0
+                      },
+                      "direction": "row",
+                      "splitPercentage": 33.333333333333336
                     },
-                    "splitPercentage": 33.33,
-                    "direction": "row"
+                    "direction": "row",
+                    "splitPercentage": 25.0
                   },
-                  "splitPercentage": 25.0,
-                  "direction": "row"
+                  "direction": "row",
+                  "splitPercentage": 20.0
                 },
                 "direction": "column",
                 "second": {
@@ -593,16 +598,40 @@
     "Indicator!cliState": {
       "fallbackColor": "#64748b",
       "foxglovePanelTitle": "CLI 状态",
-      "fontSize": 24,
-      "path": "/radio/cli/control.display_state",
-      "fallbackLabel": "其他 CLI 状态 · 详见右侧状态详情",
+      "fontSize": 22,
+      "path": "/radio/cli/control.display_state_with_mode",
+      "fallbackLabel": "等待新版CLI模式状态 · 请配套更新接收端",
       "style": "background",
       "rules": [
         {
-          "rawValue": "操作中",
+          "rawValue": "操作中 · 正常",
           "operator": "=",
           "color": "#f59e0b",
-          "label": "CLI 在线 · 操作中"
+          "label": "CLI 在线 · 操作中 · 正常"
+        },
+        {
+          "rawValue": "操作中 · 制动台架",
+          "operator": "=",
+          "color": "#f59e0b",
+          "label": "CLI 在线 · 操作中 · 制动台架"
+        },
+        {
+          "rawValue": "操作中 · 有人跑动记录",
+          "operator": "=",
+          "color": "#f59e0b",
+          "label": "CLI 在线 · 操作中 · 有人跑动记录"
+        },
+        {
+          "rawValue": "操作中 · 仅传感器",
+          "operator": "=",
+          "color": "#f59e0b",
+          "label": "CLI 在线 · 操作中 · 仅传感器"
+        },
+        {
+          "rawValue": "操作中 · 未知模式",
+          "operator": "=",
+          "color": "#f59e0b",
+          "label": "CLI 在线 · 操作中 · 未知模式"
         },
         {
           "label": "等待 CLI 状态",
@@ -617,160 +646,814 @@
           "rawValue": "离线"
         },
         {
-          "label": "CLI 在线 · 等待操作",
+          "label": "CLI 在线 · 等待操作 · 正常",
           "operator": "=",
           "color": "#3b82f6",
-          "rawValue": "等待操作"
+          "rawValue": "等待操作 · 正常"
         },
         {
-          "label": "CLI 在线 · FSD 已停止",
+          "label": "CLI 在线 · 等待操作 · 制动台架",
           "operator": "=",
           "color": "#3b82f6",
-          "rawValue": "已停止"
+          "rawValue": "等待操作 · 制动台架"
         },
         {
-          "label": "CLI 在线 · FSD 运行中",
+          "label": "CLI 在线 · 等待操作 · 有人跑动记录",
+          "operator": "=",
+          "color": "#3b82f6",
+          "rawValue": "等待操作 · 有人跑动记录"
+        },
+        {
+          "label": "CLI 在线 · 等待操作 · 仅传感器",
+          "operator": "=",
+          "color": "#3b82f6",
+          "rawValue": "等待操作 · 仅传感器"
+        },
+        {
+          "label": "CLI 在线 · 等待操作 · 未知模式",
+          "operator": "=",
+          "color": "#3b82f6",
+          "rawValue": "等待操作 · 未知模式"
+        },
+        {
+          "label": "CLI 在线 · FSD 已停止 · 正常",
+          "operator": "=",
+          "color": "#3b82f6",
+          "rawValue": "已停止 · 正常"
+        },
+        {
+          "label": "CLI 在线 · FSD 已停止 · 制动台架",
+          "operator": "=",
+          "color": "#3b82f6",
+          "rawValue": "已停止 · 制动台架"
+        },
+        {
+          "label": "CLI 在线 · FSD 已停止 · 有人跑动记录",
+          "operator": "=",
+          "color": "#3b82f6",
+          "rawValue": "已停止 · 有人跑动记录"
+        },
+        {
+          "label": "CLI 在线 · FSD 已停止 · 仅传感器",
+          "operator": "=",
+          "color": "#3b82f6",
+          "rawValue": "已停止 · 仅传感器"
+        },
+        {
+          "label": "CLI 在线 · FSD 已停止 · 未知模式",
+          "operator": "=",
+          "color": "#3b82f6",
+          "rawValue": "已停止 · 未知模式"
+        },
+        {
+          "label": "CLI 在线 · FSD 运行中 · 正常",
           "operator": "=",
           "color": "#22c55e",
-          "rawValue": "运行中"
+          "rawValue": "运行中 · 正常"
         },
         {
-          "label": "CLI 在线 · 并行检查中",
-          "operator": "=",
-          "color": "#f59e0b",
-          "rawValue": "并行检查中"
-        },
-        {
-          "label": "CLI 在线 · 预检查通过",
+          "label": "CLI 在线 · FSD 运行中 · 制动台架",
           "operator": "=",
           "color": "#22c55e",
-          "rawValue": "预检查通过"
+          "rawValue": "运行中 · 制动台架"
         },
         {
-          "label": "CLI 在线 · 启动中",
+          "label": "CLI 在线 · FSD 运行中 · 有人跑动记录",
+          "operator": "=",
+          "color": "#22c55e",
+          "rawValue": "运行中 · 有人跑动记录"
+        },
+        {
+          "label": "CLI 在线 · FSD 运行中 · 仅传感器",
+          "operator": "=",
+          "color": "#22c55e",
+          "rawValue": "运行中 · 仅传感器"
+        },
+        {
+          "label": "CLI 在线 · FSD 运行中 · 未知模式",
+          "operator": "=",
+          "color": "#22c55e",
+          "rawValue": "运行中 · 未知模式"
+        },
+        {
+          "label": "CLI 在线 · 并行检查中 · 正常",
           "operator": "=",
           "color": "#f59e0b",
-          "rawValue": "启动中"
+          "rawValue": "并行检查中 · 正常"
         },
         {
-          "label": "CLI 在线 · 构建中",
+          "label": "CLI 在线 · 并行检查中 · 制动台架",
           "operator": "=",
           "color": "#f59e0b",
-          "rawValue": "构建中"
+          "rawValue": "并行检查中 · 制动台架"
         },
         {
-          "label": "CLI 在线 · 预检查失败",
+          "label": "CLI 在线 · 并行检查中 · 有人跑动记录",
+          "operator": "=",
+          "color": "#f59e0b",
+          "rawValue": "并行检查中 · 有人跑动记录"
+        },
+        {
+          "label": "CLI 在线 · 并行检查中 · 仅传感器",
+          "operator": "=",
+          "color": "#f59e0b",
+          "rawValue": "并行检查中 · 仅传感器"
+        },
+        {
+          "label": "CLI 在线 · 并行检查中 · 未知模式",
+          "operator": "=",
+          "color": "#f59e0b",
+          "rawValue": "并行检查中 · 未知模式"
+        },
+        {
+          "label": "CLI 在线 · 预检查通过 · 正常",
+          "operator": "=",
+          "color": "#22c55e",
+          "rawValue": "预检查通过 · 正常"
+        },
+        {
+          "label": "CLI 在线 · 预检查通过 · 制动台架",
+          "operator": "=",
+          "color": "#22c55e",
+          "rawValue": "预检查通过 · 制动台架"
+        },
+        {
+          "label": "CLI 在线 · 预检查通过 · 有人跑动记录",
+          "operator": "=",
+          "color": "#22c55e",
+          "rawValue": "预检查通过 · 有人跑动记录"
+        },
+        {
+          "label": "CLI 在线 · 预检查通过 · 仅传感器",
+          "operator": "=",
+          "color": "#22c55e",
+          "rawValue": "预检查通过 · 仅传感器"
+        },
+        {
+          "label": "CLI 在线 · 预检查通过 · 未知模式",
+          "operator": "=",
+          "color": "#22c55e",
+          "rawValue": "预检查通过 · 未知模式"
+        },
+        {
+          "label": "CLI 在线 · 启动中 · 正常",
+          "operator": "=",
+          "color": "#f59e0b",
+          "rawValue": "启动中 · 正常"
+        },
+        {
+          "label": "CLI 在线 · 启动中 · 制动台架",
+          "operator": "=",
+          "color": "#f59e0b",
+          "rawValue": "启动中 · 制动台架"
+        },
+        {
+          "label": "CLI 在线 · 启动中 · 有人跑动记录",
+          "operator": "=",
+          "color": "#f59e0b",
+          "rawValue": "启动中 · 有人跑动记录"
+        },
+        {
+          "label": "CLI 在线 · 启动中 · 仅传感器",
+          "operator": "=",
+          "color": "#f59e0b",
+          "rawValue": "启动中 · 仅传感器"
+        },
+        {
+          "label": "CLI 在线 · 启动中 · 未知模式",
+          "operator": "=",
+          "color": "#f59e0b",
+          "rawValue": "启动中 · 未知模式"
+        },
+        {
+          "label": "CLI 在线 · 构建中 · 正常",
+          "operator": "=",
+          "color": "#f59e0b",
+          "rawValue": "构建中 · 正常"
+        },
+        {
+          "label": "CLI 在线 · 构建中 · 制动台架",
+          "operator": "=",
+          "color": "#f59e0b",
+          "rawValue": "构建中 · 制动台架"
+        },
+        {
+          "label": "CLI 在线 · 构建中 · 有人跑动记录",
+          "operator": "=",
+          "color": "#f59e0b",
+          "rawValue": "构建中 · 有人跑动记录"
+        },
+        {
+          "label": "CLI 在线 · 构建中 · 仅传感器",
+          "operator": "=",
+          "color": "#f59e0b",
+          "rawValue": "构建中 · 仅传感器"
+        },
+        {
+          "label": "CLI 在线 · 构建中 · 未知模式",
+          "operator": "=",
+          "color": "#f59e0b",
+          "rawValue": "构建中 · 未知模式"
+        },
+        {
+          "label": "CLI 在线 · 预检查失败 · 正常",
           "operator": "=",
           "color": "#ef4444",
-          "rawValue": "预检查失败：可修复后重试"
+          "rawValue": "预检查失败：可修复后重试 · 正常"
         },
         {
-          "label": "CLI 在线 · 启动失败",
+          "label": "CLI 在线 · 预检查失败 · 制动台架",
           "operator": "=",
           "color": "#ef4444",
-          "rawValue": "启动失败：可修复后重试"
+          "rawValue": "预检查失败：可修复后重试 · 制动台架"
         },
         {
-          "label": "CLI 在线 · 停止清理未完成",
+          "label": "CLI 在线 · 预检查失败 · 有人跑动记录",
           "operator": "=",
           "color": "#ef4444",
-          "rawValue": "清理未完成；请 p 认证后重试 x / q"
+          "rawValue": "预检查失败：可修复后重试 · 有人跑动记录"
         },
         {
-          "rawValue": "退出码:0",
+          "label": "CLI 在线 · 预检查失败 · 仅传感器",
           "operator": "=",
-          "label": "启动任务退出 0 · 正常结束",
+          "color": "#ef4444",
+          "rawValue": "预检查失败：可修复后重试 · 仅传感器"
+        },
+        {
+          "label": "CLI 在线 · 预检查失败 · 未知模式",
+          "operator": "=",
+          "color": "#ef4444",
+          "rawValue": "预检查失败：可修复后重试 · 未知模式"
+        },
+        {
+          "label": "CLI 在线 · 启动失败 · 正常",
+          "operator": "=",
+          "color": "#ef4444",
+          "rawValue": "启动失败：可修复后重试 · 正常"
+        },
+        {
+          "label": "CLI 在线 · 启动失败 · 制动台架",
+          "operator": "=",
+          "color": "#ef4444",
+          "rawValue": "启动失败：可修复后重试 · 制动台架"
+        },
+        {
+          "label": "CLI 在线 · 启动失败 · 有人跑动记录",
+          "operator": "=",
+          "color": "#ef4444",
+          "rawValue": "启动失败：可修复后重试 · 有人跑动记录"
+        },
+        {
+          "label": "CLI 在线 · 启动失败 · 仅传感器",
+          "operator": "=",
+          "color": "#ef4444",
+          "rawValue": "启动失败：可修复后重试 · 仅传感器"
+        },
+        {
+          "label": "CLI 在线 · 启动失败 · 未知模式",
+          "operator": "=",
+          "color": "#ef4444",
+          "rawValue": "启动失败：可修复后重试 · 未知模式"
+        },
+        {
+          "label": "CLI 在线 · 停止清理未完成 · 正常",
+          "operator": "=",
+          "color": "#ef4444",
+          "rawValue": "清理未完成；请 p 认证后重试 x / q · 正常"
+        },
+        {
+          "label": "CLI 在线 · 停止清理未完成 · 制动台架",
+          "operator": "=",
+          "color": "#ef4444",
+          "rawValue": "清理未完成；请 p 认证后重试 x / q · 制动台架"
+        },
+        {
+          "label": "CLI 在线 · 停止清理未完成 · 有人跑动记录",
+          "operator": "=",
+          "color": "#ef4444",
+          "rawValue": "清理未完成；请 p 认证后重试 x / q · 有人跑动记录"
+        },
+        {
+          "label": "CLI 在线 · 停止清理未完成 · 仅传感器",
+          "operator": "=",
+          "color": "#ef4444",
+          "rawValue": "清理未完成；请 p 认证后重试 x / q · 仅传感器"
+        },
+        {
+          "label": "CLI 在线 · 停止清理未完成 · 未知模式",
+          "operator": "=",
+          "color": "#ef4444",
+          "rawValue": "清理未完成；请 p 认证后重试 x / q · 未知模式"
+        },
+        {
+          "rawValue": "退出码:0 · 正常",
+          "operator": "=",
+          "label": "启动任务退出 0 · 正常结束 · 正常",
           "color": "#3b82f6"
         },
         {
-          "rawValue": "退出码:1",
+          "rawValue": "退出码:0 · 制动台架",
           "operator": "=",
-          "label": "启动任务退出 1 · 启动或运行失败 · 查看日志",
+          "label": "启动任务退出 0 · 正常结束 · 制动台架",
+          "color": "#3b82f6"
+        },
+        {
+          "rawValue": "退出码:0 · 有人跑动记录",
+          "operator": "=",
+          "label": "启动任务退出 0 · 正常结束 · 有人跑动记录",
+          "color": "#3b82f6"
+        },
+        {
+          "rawValue": "退出码:0 · 仅传感器",
+          "operator": "=",
+          "label": "启动任务退出 0 · 正常结束 · 仅传感器",
+          "color": "#3b82f6"
+        },
+        {
+          "rawValue": "退出码:0 · 未知模式",
+          "operator": "=",
+          "label": "启动任务退出 0 · 正常结束 · 未知模式",
+          "color": "#3b82f6"
+        },
+        {
+          "rawValue": "退出码:1 · 正常",
+          "operator": "=",
+          "label": "启动任务退出 1 · 启动或运行失败 · 查看日志 · 正常",
           "color": "#ef4444"
         },
         {
-          "rawValue": "退出码:2",
+          "rawValue": "退出码:1 · 制动台架",
           "operator": "=",
-          "label": "启动任务退出 2 · 参数或命令用法错误",
+          "label": "启动任务退出 1 · 启动或运行失败 · 查看日志 · 制动台架",
           "color": "#ef4444"
         },
         {
-          "rawValue": "退出码:126",
+          "rawValue": "退出码:1 · 有人跑动记录",
           "operator": "=",
-          "label": "启动任务退出 126 · 命令无法执行",
+          "label": "启动任务退出 1 · 启动或运行失败 · 查看日志 · 有人跑动记录",
           "color": "#ef4444"
         },
         {
-          "rawValue": "退出码:127",
+          "rawValue": "退出码:1 · 仅传感器",
           "operator": "=",
-          "label": "启动任务退出 127 · 命令不存在或无法启动",
+          "label": "启动任务退出 1 · 启动或运行失败 · 查看日志 · 仅传感器",
           "color": "#ef4444"
         },
         {
-          "rawValue": "退出码:130",
+          "rawValue": "退出码:1 · 未知模式",
           "operator": "=",
-          "label": "启动任务退出 130 · SIGINT 中断 · 可能为主动停止",
+          "label": "启动任务退出 1 · 启动或运行失败 · 查看日志 · 未知模式",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:2 · 正常",
+          "operator": "=",
+          "label": "启动任务退出 2 · 参数或命令用法错误 · 正常",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:2 · 制动台架",
+          "operator": "=",
+          "label": "启动任务退出 2 · 参数或命令用法错误 · 制动台架",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:2 · 有人跑动记录",
+          "operator": "=",
+          "label": "启动任务退出 2 · 参数或命令用法错误 · 有人跑动记录",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:2 · 仅传感器",
+          "operator": "=",
+          "label": "启动任务退出 2 · 参数或命令用法错误 · 仅传感器",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:2 · 未知模式",
+          "operator": "=",
+          "label": "启动任务退出 2 · 参数或命令用法错误 · 未知模式",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:126 · 正常",
+          "operator": "=",
+          "label": "启动任务退出 126 · 命令无法执行 · 正常",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:126 · 制动台架",
+          "operator": "=",
+          "label": "启动任务退出 126 · 命令无法执行 · 制动台架",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:126 · 有人跑动记录",
+          "operator": "=",
+          "label": "启动任务退出 126 · 命令无法执行 · 有人跑动记录",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:126 · 仅传感器",
+          "operator": "=",
+          "label": "启动任务退出 126 · 命令无法执行 · 仅传感器",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:126 · 未知模式",
+          "operator": "=",
+          "label": "启动任务退出 126 · 命令无法执行 · 未知模式",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:127 · 正常",
+          "operator": "=",
+          "label": "启动任务退出 127 · 命令不存在或无法启动 · 正常",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:127 · 制动台架",
+          "operator": "=",
+          "label": "启动任务退出 127 · 命令不存在或无法启动 · 制动台架",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:127 · 有人跑动记录",
+          "operator": "=",
+          "label": "启动任务退出 127 · 命令不存在或无法启动 · 有人跑动记录",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:127 · 仅传感器",
+          "operator": "=",
+          "label": "启动任务退出 127 · 命令不存在或无法启动 · 仅传感器",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:127 · 未知模式",
+          "operator": "=",
+          "label": "启动任务退出 127 · 命令不存在或无法启动 · 未知模式",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:130 · 正常",
+          "operator": "=",
+          "label": "启动任务退出 130 · SIGINT 中断 · 可能为主动停止 · 正常",
           "color": "#f59e0b"
         },
         {
-          "rawValue": "退出码:143",
+          "rawValue": "退出码:130 · 制动台架",
           "operator": "=",
-          "label": "启动任务退出 143 · SIGTERM 请求终止",
+          "label": "启动任务退出 130 · SIGINT 中断 · 可能为主动停止 · 制动台架",
           "color": "#f59e0b"
         },
         {
-          "rawValue": "退出码:137",
+          "rawValue": "退出码:130 · 有人跑动记录",
           "operator": "=",
-          "label": "启动任务退出 137 · SIGKILL 强制终止 · 查看日志",
-          "color": "#ef4444"
-        },
-        {
-          "rawValue": "退出码:-2",
-          "operator": "=",
-          "label": "启动任务退出 -2 · SIGINT 中断 · 可能为主动停止",
+          "label": "启动任务退出 130 · SIGINT 中断 · 可能为主动停止 · 有人跑动记录",
           "color": "#f59e0b"
         },
         {
-          "rawValue": "退出码:-15",
+          "rawValue": "退出码:130 · 仅传感器",
           "operator": "=",
-          "label": "启动任务退出 -15 · SIGTERM 请求终止",
+          "label": "启动任务退出 130 · SIGINT 中断 · 可能为主动停止 · 仅传感器",
           "color": "#f59e0b"
         },
         {
-          "rawValue": "退出码:-9",
+          "rawValue": "退出码:130 · 未知模式",
           "operator": "=",
-          "label": "启动任务退出 -9 · SIGKILL 强制终止 · 查看日志",
+          "label": "启动任务退出 130 · SIGINT 中断 · 可能为主动停止 · 未知模式",
+          "color": "#f59e0b"
+        },
+        {
+          "rawValue": "退出码:143 · 正常",
+          "operator": "=",
+          "label": "启动任务退出 143 · SIGTERM 请求终止 · 正常",
+          "color": "#f59e0b"
+        },
+        {
+          "rawValue": "退出码:143 · 制动台架",
+          "operator": "=",
+          "label": "启动任务退出 143 · SIGTERM 请求终止 · 制动台架",
+          "color": "#f59e0b"
+        },
+        {
+          "rawValue": "退出码:143 · 有人跑动记录",
+          "operator": "=",
+          "label": "启动任务退出 143 · SIGTERM 请求终止 · 有人跑动记录",
+          "color": "#f59e0b"
+        },
+        {
+          "rawValue": "退出码:143 · 仅传感器",
+          "operator": "=",
+          "label": "启动任务退出 143 · SIGTERM 请求终止 · 仅传感器",
+          "color": "#f59e0b"
+        },
+        {
+          "rawValue": "退出码:143 · 未知模式",
+          "operator": "=",
+          "label": "启动任务退出 143 · SIGTERM 请求终止 · 未知模式",
+          "color": "#f59e0b"
+        },
+        {
+          "rawValue": "退出码:137 · 正常",
+          "operator": "=",
+          "label": "启动任务退出 137 · SIGKILL 强制终止 · 查看日志 · 正常",
           "color": "#ef4444"
         },
         {
-          "rawValue": "退出码:134",
+          "rawValue": "退出码:137 · 制动台架",
           "operator": "=",
-          "label": "启动任务退出 134 · SIGABRT 异常终止",
+          "label": "启动任务退出 137 · SIGKILL 强制终止 · 查看日志 · 制动台架",
           "color": "#ef4444"
         },
         {
-          "rawValue": "退出码:-6",
+          "rawValue": "退出码:137 · 有人跑动记录",
           "operator": "=",
-          "label": "启动任务退出 -6 · SIGABRT 异常终止",
+          "label": "启动任务退出 137 · SIGKILL 强制终止 · 查看日志 · 有人跑动记录",
           "color": "#ef4444"
         },
         {
-          "rawValue": "退出码:139",
+          "rawValue": "退出码:137 · 仅传感器",
           "operator": "=",
-          "label": "启动任务退出 139 · SIGSEGV 段错误",
+          "label": "启动任务退出 137 · SIGKILL 强制终止 · 查看日志 · 仅传感器",
           "color": "#ef4444"
         },
         {
-          "rawValue": "退出码:-11",
+          "rawValue": "退出码:137 · 未知模式",
           "operator": "=",
-          "label": "启动任务退出 -11 · SIGSEGV 段错误",
+          "label": "启动任务退出 137 · SIGKILL 强制终止 · 查看日志 · 未知模式",
           "color": "#ef4444"
         },
         {
-          "rawValue": "其他退出码",
+          "rawValue": "退出码:-2 · 正常",
           "operator": "=",
-          "label": "启动任务已退出 · 其他退出码见详情",
+          "label": "启动任务退出 -2 · SIGINT 中断 · 可能为主动停止 · 正常",
+          "color": "#f59e0b"
+        },
+        {
+          "rawValue": "退出码:-2 · 制动台架",
+          "operator": "=",
+          "label": "启动任务退出 -2 · SIGINT 中断 · 可能为主动停止 · 制动台架",
+          "color": "#f59e0b"
+        },
+        {
+          "rawValue": "退出码:-2 · 有人跑动记录",
+          "operator": "=",
+          "label": "启动任务退出 -2 · SIGINT 中断 · 可能为主动停止 · 有人跑动记录",
+          "color": "#f59e0b"
+        },
+        {
+          "rawValue": "退出码:-2 · 仅传感器",
+          "operator": "=",
+          "label": "启动任务退出 -2 · SIGINT 中断 · 可能为主动停止 · 仅传感器",
+          "color": "#f59e0b"
+        },
+        {
+          "rawValue": "退出码:-2 · 未知模式",
+          "operator": "=",
+          "label": "启动任务退出 -2 · SIGINT 中断 · 可能为主动停止 · 未知模式",
+          "color": "#f59e0b"
+        },
+        {
+          "rawValue": "退出码:-15 · 正常",
+          "operator": "=",
+          "label": "启动任务退出 -15 · SIGTERM 请求终止 · 正常",
+          "color": "#f59e0b"
+        },
+        {
+          "rawValue": "退出码:-15 · 制动台架",
+          "operator": "=",
+          "label": "启动任务退出 -15 · SIGTERM 请求终止 · 制动台架",
+          "color": "#f59e0b"
+        },
+        {
+          "rawValue": "退出码:-15 · 有人跑动记录",
+          "operator": "=",
+          "label": "启动任务退出 -15 · SIGTERM 请求终止 · 有人跑动记录",
+          "color": "#f59e0b"
+        },
+        {
+          "rawValue": "退出码:-15 · 仅传感器",
+          "operator": "=",
+          "label": "启动任务退出 -15 · SIGTERM 请求终止 · 仅传感器",
+          "color": "#f59e0b"
+        },
+        {
+          "rawValue": "退出码:-15 · 未知模式",
+          "operator": "=",
+          "label": "启动任务退出 -15 · SIGTERM 请求终止 · 未知模式",
+          "color": "#f59e0b"
+        },
+        {
+          "rawValue": "退出码:-9 · 正常",
+          "operator": "=",
+          "label": "启动任务退出 -9 · SIGKILL 强制终止 · 查看日志 · 正常",
           "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:-9 · 制动台架",
+          "operator": "=",
+          "label": "启动任务退出 -9 · SIGKILL 强制终止 · 查看日志 · 制动台架",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:-9 · 有人跑动记录",
+          "operator": "=",
+          "label": "启动任务退出 -9 · SIGKILL 强制终止 · 查看日志 · 有人跑动记录",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:-9 · 仅传感器",
+          "operator": "=",
+          "label": "启动任务退出 -9 · SIGKILL 强制终止 · 查看日志 · 仅传感器",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:-9 · 未知模式",
+          "operator": "=",
+          "label": "启动任务退出 -9 · SIGKILL 强制终止 · 查看日志 · 未知模式",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:134 · 正常",
+          "operator": "=",
+          "label": "启动任务退出 134 · SIGABRT 异常终止 · 正常",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:134 · 制动台架",
+          "operator": "=",
+          "label": "启动任务退出 134 · SIGABRT 异常终止 · 制动台架",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:134 · 有人跑动记录",
+          "operator": "=",
+          "label": "启动任务退出 134 · SIGABRT 异常终止 · 有人跑动记录",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:134 · 仅传感器",
+          "operator": "=",
+          "label": "启动任务退出 134 · SIGABRT 异常终止 · 仅传感器",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:134 · 未知模式",
+          "operator": "=",
+          "label": "启动任务退出 134 · SIGABRT 异常终止 · 未知模式",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:-6 · 正常",
+          "operator": "=",
+          "label": "启动任务退出 -6 · SIGABRT 异常终止 · 正常",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:-6 · 制动台架",
+          "operator": "=",
+          "label": "启动任务退出 -6 · SIGABRT 异常终止 · 制动台架",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:-6 · 有人跑动记录",
+          "operator": "=",
+          "label": "启动任务退出 -6 · SIGABRT 异常终止 · 有人跑动记录",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:-6 · 仅传感器",
+          "operator": "=",
+          "label": "启动任务退出 -6 · SIGABRT 异常终止 · 仅传感器",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:-6 · 未知模式",
+          "operator": "=",
+          "label": "启动任务退出 -6 · SIGABRT 异常终止 · 未知模式",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:139 · 正常",
+          "operator": "=",
+          "label": "启动任务退出 139 · SIGSEGV 段错误 · 正常",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:139 · 制动台架",
+          "operator": "=",
+          "label": "启动任务退出 139 · SIGSEGV 段错误 · 制动台架",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:139 · 有人跑动记录",
+          "operator": "=",
+          "label": "启动任务退出 139 · SIGSEGV 段错误 · 有人跑动记录",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:139 · 仅传感器",
+          "operator": "=",
+          "label": "启动任务退出 139 · SIGSEGV 段错误 · 仅传感器",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:139 · 未知模式",
+          "operator": "=",
+          "label": "启动任务退出 139 · SIGSEGV 段错误 · 未知模式",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:-11 · 正常",
+          "operator": "=",
+          "label": "启动任务退出 -11 · SIGSEGV 段错误 · 正常",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:-11 · 制动台架",
+          "operator": "=",
+          "label": "启动任务退出 -11 · SIGSEGV 段错误 · 制动台架",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:-11 · 有人跑动记录",
+          "operator": "=",
+          "label": "启动任务退出 -11 · SIGSEGV 段错误 · 有人跑动记录",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:-11 · 仅传感器",
+          "operator": "=",
+          "label": "启动任务退出 -11 · SIGSEGV 段错误 · 仅传感器",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "退出码:-11 · 未知模式",
+          "operator": "=",
+          "label": "启动任务退出 -11 · SIGSEGV 段错误 · 未知模式",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "其他退出码 · 正常",
+          "operator": "=",
+          "label": "启动任务已退出 · 其他退出码见详情 · 正常",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "其他退出码 · 制动台架",
+          "operator": "=",
+          "label": "启动任务已退出 · 其他退出码见详情 · 制动台架",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "其他退出码 · 有人跑动记录",
+          "operator": "=",
+          "label": "启动任务已退出 · 其他退出码见详情 · 有人跑动记录",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "其他退出码 · 仅传感器",
+          "operator": "=",
+          "label": "启动任务已退出 · 其他退出码见详情 · 仅传感器",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "其他退出码 · 未知模式",
+          "operator": "=",
+          "label": "启动任务已退出 · 其他退出码见详情 · 未知模式",
+          "color": "#ef4444"
+        },
+        {
+          "rawValue": "其他CLI状态 · 正常",
+          "operator": "=",
+          "color": "#64748b",
+          "label": "CLI 在线 · 其他状态，详见详情 · 正常"
+        },
+        {
+          "rawValue": "其他CLI状态 · 制动台架",
+          "operator": "=",
+          "color": "#64748b",
+          "label": "CLI 在线 · 其他状态，详见详情 · 制动台架"
+        },
+        {
+          "rawValue": "其他CLI状态 · 有人跑动记录",
+          "operator": "=",
+          "color": "#64748b",
+          "label": "CLI 在线 · 其他状态，详见详情 · 有人跑动记录"
+        },
+        {
+          "rawValue": "其他CLI状态 · 仅传感器",
+          "operator": "=",
+          "color": "#64748b",
+          "label": "CLI 在线 · 其他状态，详见详情 · 仅传感器"
+        },
+        {
+          "rawValue": "其他CLI状态 · 未知模式",
+          "operator": "=",
+          "color": "#64748b",
+          "label": "CLI 在线 · 其他状态，详见详情 · 未知模式"
         }
       ]
     },
@@ -2412,6 +3095,16 @@
       "foxglovePanelTitle": "参数操作详情",
       "topicPath": "/radio/cli/control.parameter_detail",
       "defaultExpanded": true
+    },
+    "Publish!cli_cycle_mode": {
+      "advancedView": false,
+      "buttonText": "切换模式",
+      "topicName": "/fsd_radio/extension/tx",
+      "value": "{\"action\":\"cycle_mode\",\"type\":\"cli\"}",
+      "datatype": "fsd_radio.CliCommand",
+      "buttonTooltip": "等同CLI的M键：正常→制动台架→有人跑动记录→正常；仅停止并完成清理后可切换，结果以Linux状态为准",
+      "foxglovePanelTitle": "切换模式",
+      "buttonColor": "#8b5cf6"
     }
   },
   "layout": "Tab!radioMonitor",

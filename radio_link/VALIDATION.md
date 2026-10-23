@@ -87,3 +87,5 @@
 在本机系统Python3.10虚拟环境安装Linux/PC/测试依赖，加载已有ROS 2 Humble及FSD消息环境后，完整测试：**30 passed in 18.24s**。包含domain 191的ROS订阅、消息转换及双向扩展测试、TCP串口替身、Foxglove SDK WebSocket；不接触真实硬件。测试显式启用测试需要的可选路径图层，默认无线配置仍服从RViz图层开关。Humble测试插件需要pytest<9。
 
 本机默认E22使用by-id路径，独立启动加载共享环境脚本；`--help`、Bash语法检查通过。真实无线进程曾发送UART数据但RX=0，没有完成双模块空口或Windows接收验证。串口与相机雷达的关系及尚未完成的对照测试见[设备共存检查](../docs/DEVICE_COEXISTENCE.md)。
+
+2026-10-23无线0.7.10：人工审阅M键到统一控制接口、优先级/允许列表、expected_mode/boot与持久去重、CLI状态字段到原Indicator、模式未知/离线及操作中/退出码显示。用户此前要求不执行验证，未运行测试、WSL、接收程序、CLI操作或硬件；Windows仅重新构建exe。历史测试结果不代表本版已实机验收。

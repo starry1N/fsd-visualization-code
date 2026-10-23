@@ -25,6 +25,12 @@ EXIT_MEANINGS = {
     139: 'SIGSEGV 段错误', -11: 'SIGSEGV 段错误',
 }
 
+CLI_DISPLAY_PHASES = frozenset((
+    '操作中', '等待操作', '已停止', '运行中', '并行检查中', '预检查通过',
+    '启动中', '构建中', '预检查失败：可修复后重试', '启动失败：可修复后重试',
+    '清理未完成；请 p 认证后重试 x / q', '其他退出码',
+))
+
 
 def runtime_exit(heartbeat):
     code = heartbeat.get('runtime_exit_code')
@@ -65,7 +71,7 @@ class LinuxControl:
             if int(request['expires_ns']) < time.time_ns():
                 raise ValueError('CLI请求已过期')
             if request.get('op') not in ('cli.status', 'cli.result', 'cli.check', 'cli.start', 'cli.stop',
-                                         'config.list', 'config.read', 'config.set'):
+                                         'config.list', 'config.read', 'config.set', 'cli.cycle_mode'):
                 raise ValueError('Unknown CLI operation')
             digest = request_hash(request)
             result_path = self.directory / 'results' / (ident + '.json')
@@ -102,7 +108,7 @@ class LinuxControl:
                 'k': 'cli_control', 't': self.state['updated_ns'], 'clock_domain': 'unix',
                 **{key: self.state.get(key) for key in
                    ('boot', 'online', 'phase', 'running', 'run', 'active', 'last', 'config_error',
-                    'runtime_exit_code')}
+                    'runtime_exit_code', 'selected_mode', 'active_mode')}
             }, interval=2, weight=3)
             self.last_heartbeat = now
         for ident, pending in sorted(list(self.pending.items()), key=lambda row: not row[1]['priority']):
@@ -188,7 +194,7 @@ class PcControl:
             return False
         with self.lock:
             action = body.get('action')
-            if action not in ('check', 'start', 'stop', 'save', 'reload', 'status'):
+            if action not in ('check', 'start', 'stop', 'save', 'reload', 'status', 'cycle_mode'):
                 raise ValueError('Unknown CLI action')
             if len(self.queue) >= 8:
                 raise ValueError('CLI command queue is full')
@@ -248,7 +254,7 @@ class PcControl:
                 if self.boot:
                     self.retired_boots.append(self.boot)
                 self.boot = boot
-                unknown = any(p['op'] in ('cli.start', 'cli.stop', 'config.set') for p in self.pending.values())
+                unknown = any(p['op'] in ('cli.start', 'cli.stop', 'config.set', 'cli.cycle_mode') for p in self.pending.values())
                 self.modules.clear()
                 self.files.clear()
                 self.drafts.clear()
@@ -380,10 +386,16 @@ class PcControl:
                             self.note('已丢弃草稿，重新读取Linux文件')
                             self.parameter_note('等待', '已丢弃草稿，正在重新读取Linux文件')
                         else:
-                            if action in ('check', 'start', 'stop') and any(
-                                    p['op'] in ('cli.check', 'cli.start', 'cli.stop') for p in self.pending.values()):
+                            if action in ('check', 'start', 'stop', 'cycle_mode') and any(
+                                    p['op'] in ('cli.check', 'cli.start', 'cli.stop', 'cli.cycle_mode') for p in self.pending.values()):
                                 raise ValueError('已有CLI操作等待结果，请勿重复操作')
-                            self.request('cli.' + action)
+                            if action == 'cycle_mode':
+                                mode = self.heartbeat.get('selected_mode')
+                                if mode not in ('normal', 'brake_bench', 'manual_record'):
+                                    raise ValueError('CLI模式未知或此会话不可切换，请更新CLI并等待状态')
+                                self.request('cli.cycle_mode', expected_mode=mode)
+                            else:
+                                self.request('cli.' + action)
                     outstanding = {(p['op'], p['args'].get('module')) for p in self.pending.values()}
                     if not self.modules and '__catalog__' not in self.failed_reads and ('config.list', None) not in outstanding:
                         self.request('config.list')
@@ -408,7 +420,7 @@ class PcControl:
                 busy = bool(online and (
                     (self.heartbeat.get('active') or {}).get('op') in CONTROL_OPERATIONS
                     or any(item['op'] in CONTROL_OPERATIONS for item in self.pending.values())
-                    or any(action in ('check', 'start', 'stop', 'status', 'save') for action in self.queue)))
+                    or any(action in ('check', 'start', 'stop', 'status', 'save', 'cycle_mode') for action in self.queue)))
                 exit_code, exit_detail, exit_state = runtime_exit(self.heartbeat)
                 phase = str(self.heartbeat.get('phase') or '未知状态')
                 show_exit = (not self.heartbeat.get('running') and exit_state and
@@ -416,6 +428,11 @@ class PcControl:
                 status = {
                     **self.heartbeat, 'online': online, 'status': self.cache.get('meta/status'),
                     'busy': busy,
+                    'mode_display': ('等待CLI状态' if not self.heartbeat else '离线' if not online else
+                                     {'normal': '正常', 'hardware': '正常', 'brake_bench': '制动台架',
+                                      'manual_record': '有人跑动记录', 'sensor_only': '仅传感器'}.get(
+                                         self.heartbeat.get('active_mode') if self.heartbeat.get('running')
+                                         else self.heartbeat.get('selected_mode'), '未知模式')),
                     'parameter_state': self.parameter_state(online),
                     'parameter_detail': self.parameter_detail,
                     'runtime_exit_code': exit_code,
@@ -430,6 +447,12 @@ class PcControl:
                     'result': self.last_result,
                     'source_stamp_ns': str(stamp), 'clock_domain': 'unix',
                 }
+                state_with_mode = status['display_state']
+                if online:
+                    if state_with_mode not in CLI_DISPLAY_PHASES and not state_with_mode.startswith('退出码:'):
+                        state_with_mode = '其他CLI状态'
+                    state_with_mode += ' · ' + status['mode_display']
+                status['display_state_with_mode'] = state_with_mode
                 self.changed = False
                 self.last_publish = time.monotonic()
             else:

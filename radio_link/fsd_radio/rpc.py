@@ -8,7 +8,7 @@ import zlib
 MAX_JSON = 262144
 CHUNK = 144
 CONTROL_OPERATIONS = frozenset(('cli.check', 'cli.start', 'cli.stop', 'cli.status',
-                                'cli.result', 'config.set'))
+                                'cli.result', 'config.set', 'cli.cycle_mode'))
 
 
 def valid_id(value):
