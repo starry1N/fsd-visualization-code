@@ -1,5 +1,9 @@
 # 无线遥测验证记录
 
+## 2026-10-23 macOS双架构GitHub Actions构建
+
+[Actions运行39927075305](https://github.com/starry1N/fsd-visualization-code/actions/runs/39927075305)从源码5861f7cd84f2d89190565de229e0dcfa4491c063分别完成macOS arm64及x86_64原生构建，随后发布[Mac Release](https://github.com/starry1N/fsd-visualization-code/releases/tag/radio-macos-v0.7.10)。包内保留BUILD_INFO与原生二进制，分别附SHA256；Windows版Release未替换。只进行打包与发布，不启动接收器、不执行测试或访问设备；未Developer ID签名/公证，macOS旧版本与真实串口使用仍未验收。
+
 ## 2026年10月21日 Windows单文件exe（0.7.9）
 
 使用Windows本机项目虚拟环境（Python 3.13.9 x64）、PyInstaller 6.22.0完成单文件构建，输出FSD_E22_Receiver.exe。人工审阅PC入口复用、冻结资源路径、外部配置优先、导出不覆盖、构建依赖清单；构建警告涉及平台条件导入、Foxglove原生扩展内注册子模块及未使用的notebook依赖，不能单凭这些警告推断运行失败或通过。按用户此前要求未执行测试、WSL、成品启动或硬件/CLI操作，构建成功不等同于运行验收。
