@@ -88,7 +88,8 @@ class DisplayBridge(Node):
             def geometry(message, p=publisher, n=output, c=color):
                 if p is not None:
                     self.cones(message, p, n) if c is None else self.lane(message, p, n, c)
-            self.subscribe_diagnostic(name, key, typ, label, geometry)
+            input_qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE) if name == 'fused' else None
+            self.subscribe_diagnostic(name, key, typ, label, geometry, qos=input_qos)
         if self.bridge_mode:
             self.trajectory_pub = self.create_publisher(MarkerArray, '/fsd_visualization/trajectory', self.qos)
         self.subscribe_diagnostic('pose', 'pose', PoseStamped, '定位位姿', self.pose if self.bridge_mode else None)

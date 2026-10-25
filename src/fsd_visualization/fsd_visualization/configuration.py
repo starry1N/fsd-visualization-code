@@ -55,6 +55,10 @@ def render(template, settings, mode):
                 topic = BRIDGE_TOPICS[name]
                 display.pop('Namespaces', None)
             display['Topic']['Value'] = topic
+            if name in ('Raw LiDAR (optional)', 'Camera detections'):
+                display['Topic']['Reliability Policy'] = 'Reliable'
+                display['Topic']['Durability Policy'] = 'Volatile'
+                display['Topic']['Depth'] = 1
             if not topic:
                 display['Enabled'] = display['Value'] = False
             if mode == 'bridge' and name == 'Fused targets and sources':

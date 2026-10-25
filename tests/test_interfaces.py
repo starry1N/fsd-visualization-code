@@ -29,6 +29,30 @@ def test_configuration_profiles():
     assert '/perception/fused/cones_viz' in native_topics
     assert '/fsd_visualization/fused_cones' in bridge_topics
     assert '/sim/ground_truth' not in native_topics
+    for profile in (native, portable):
+        cloud = next(d for d in profile['Visualization Manager']['Displays']
+                     if d['Class'] == 'rviz_default_plugins/PointCloud2')
+        assert cloud['Topic']['Reliability Policy'] == 'Reliable'
+        assert cloud['Topic']['Depth'] == 1
+        camera = next(d for d in profile['Visualization Manager']['Displays']
+                      if d['Name'] == 'Camera detections')
+        assert camera['Topic']['Reliability Policy'] == 'Reliable'
+        assert camera['Topic']['Depth'] == 1
+    # Old templates must receive current perception QoS.
+    camera = next(d for d in template['Visualization Manager']['Displays']
+                  if d['Name'] == 'Camera detections')
+    camera['Topic']['Reliability Policy'] = 'Best Effort'
+    fixed = render(template, settings, 'bridge')
+    assert next(d for d in fixed['Visualization Manager']['Displays']
+                if d['Name'] == 'Camera detections')['Topic']['Reliability Policy'] == 'Reliable'
+    # Old saved templates must also receive the current raw-LiDAR QoS.
+    cloud = next(d for d in template['Visualization Manager']['Displays']
+                 if d['Class'] == 'rviz_default_plugins/PointCloud2')
+    cloud['Topic']['Reliability Policy'] = 'Best Effort'
+    repaired = render(template, settings, 'bridge')
+    assert next(d for d in repaired['Visualization Manager']['Displays']
+                if d['Class'] == 'rviz_default_plugins/PointCloud2')['Topic']['Reliability Policy'] == 'Reliable'
+
     settings['topics']['camera_image'] = ''
     custom = render(template, settings, 'native')
     assert not next(d for d in custom['Visualization Manager']['Displays'] if d['Name']=='Camera detections')['Enabled']

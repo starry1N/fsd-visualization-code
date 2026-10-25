@@ -295,3 +295,6 @@ FSD_SETUP=/home/wuta/WUTA2026_FINAL/WUTA-FSD/ros2_ws/install/setup.bash bash sta
 原生Parameters与Publish接入CLI配置编辑、检查、启动和停止，新增“CLI 控制与参数”布局页。无线仅传输请求/结果，配置写入与操作由原CLI Manager执行，保存不隐式热更新或重启。需配套更新主仓库/CLI/显示子模块并重启两端；用法见[无线说明](radio_link/README.md)。本轮未运行测试、构建、WSL或实机验证。
 
 无线0.7.1将管理指令及其RPC确认/执行结果放入独立高优先级队列，参数批量读取保留普通数据通道。两端及CLI配套升级，完整顺序与边界见[无线说明](radio_link/README.md#071指令与数据独立优先级)。
+
+
+相机显示QoS（2026-10-25）：RViz的Camera detections与Raw LiDAR显示采用Reliable/Volatile/depth1，配置生成器亦覆盖旧模板；标注图发布者需为更新后的YOLO/LW-DETR Reliable版本。显示桥的融合ConeArray输入为Reliable/depth1。其余Marker输出和惯导接口QoS不变。修改后构建fsd_visualization并重启显示，不会自动替换运行中的RViz。
